@@ -65,5 +65,37 @@ annotate service.Requests with @(
             Value : status,
         },
     ],
+    UI.HeaderInfo : {
+        TypeName : 'Request Detail',
+        TypeNamePlural : '',
+        Title : {
+            $Type : 'UI.DataField',
+            Value : title,
+        },
+        Description : {
+            $Type : 'UI.DataField',
+            Value : description,
+        },
+        TypeImageUrl : 'sap-icon://request',
+    },
 );
+
+annotate service.Requests with {
+    title @Common.FieldControl : #Mandatory
+};
+
+annotate service.Requests with {
+    description @Common.FieldControl : #Mandatory
+};
+
+annotate service.Requests with {
+    amount @(
+        Common.FieldControl : #Mandatory,
+        Measures.ISOCurrency : currency,
+    )
+};
+
+annotate service.Requests with {
+    currency @Common.FieldControl : #Mandatory
+};
 
