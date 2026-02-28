@@ -1,0 +1,22 @@
+POST http://localhost:4004/odata/v4/request/Requests
+Content-Type: application/json
+
+{
+  "title": "Test Request",
+  "description": "Testing submit",
+  "amount": 500,
+  "currency": "EUR"
+}
+
+# POST http://localhost:4004/odata/v4/request/Requests(a02de7ad-9606-4d79-93b5-e8ec822c3b06)/submit
+# PUT http://localhost:4004/odata/v4/request/Requests(092defc1-e616-43ea-a6d3-afb2461d3ca0)
+# Content-Type: application/json
+
+# "ID": "dcf8374e-6205-4c9f-a170-a673287890db",
+# {
+#   "status": "APPROVED"
+# }
+
+
+
+# GET http://localhost:4004/odata/v4/request/Requests
