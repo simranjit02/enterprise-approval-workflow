@@ -78,6 +78,14 @@ annotate service.Requests with @(
         },
         TypeImageUrl : 'sap-icon://request',
     },
+    UI.Identification : [
+        {
+            $Type : 'UI.DataFieldForAction',
+            Action : 'Request.sendForApproval',
+            Label : 'sendForApproval',
+            Determining : true,
+        },
+    ],
 );
 
 annotate service.Requests with {
@@ -97,5 +105,9 @@ annotate service.Requests with {
 
 annotate service.Requests with {
     currency @Common.FieldControl : #Mandatory
+};
+
+annotate service.Requests with {
+    status @Common.FieldControl : #Mandatory
 };
 
