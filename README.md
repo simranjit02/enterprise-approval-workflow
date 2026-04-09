@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# enterprise-approval-workflow
-=======
 # Getting Started
 
 Welcome to your new project.
@@ -26,4 +23,3 @@ File or Folder | Purpose
 ## Learn More
 
 Learn more at https://cap.cloud.sap/docs/get-started/.
->>>>>>> 27f8ed8 (Initial commit - Enterprise Approval Workflow (CAP + Fiori))
