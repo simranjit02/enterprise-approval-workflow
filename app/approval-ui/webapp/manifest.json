@@ -128,7 +128,23 @@
           "options": {
             "settings": {
               "editableHeaderContent": false,
-              "contextPath": "/Requests"
+              "contextPath": "/Requests",
+              "refreshStrategyOnAppRestore": {
+                "intents": {
+                  "*": "full"
+                }
+              },
+              "controlConfiguration": {
+                "@com.sap.vocabularies.UI.v1.Identification": {
+                  "actions": {
+                    "Request.submit": {
+                      "afterExecution": {
+                        "navigateToInstance": true
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
         }

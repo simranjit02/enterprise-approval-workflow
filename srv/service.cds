@@ -4,6 +4,6 @@ service Request {
   @odata.draft.enabled
   entity Requests as projection on db.Request
     actions {
-      action CREATE() returns Requests;
+      action submit() returns Requests;
     };
 }

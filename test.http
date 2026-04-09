@@ -1,12 +1,12 @@
-POST http://localhost:4004/odata/v4/request/Requests
-Content-Type: application/json
+# POST http://localhost:4004/odata/v4/request/Requests
+# Content-Type: application/json
 
-{
-  "title": "Test Request",
-  "description": "Testing submit",
-  "amount": 500,
-  "currency": "EUR"
-}
+# {
+#   "title": "Test Request",
+#   "description": "Testing submit",
+#   "amount": 500,
+#   "currency": "EUR"
+# }
 
 # POST http://localhost:4004/odata/v4/request/Requests(a02de7ad-9606-4d79-93b5-e8ec822c3b06)/submit
 # PUT http://localhost:4004/odata/v4/request/Requests(092defc1-e616-43ea-a6d3-afb2461d3ca0)
@@ -20,3 +20,9 @@ Content-Type: application/json
 
 
 # GET http://localhost:4004/odata/v4/request/Requests
+# GET http://localhost:4004/odata/v4/request/Requests(ID=9cf94ce8-0baa-48fd-840d-37f96235a7e3,IsActiveEntity=true)
+
+# POST http://localhost:4004/odata/v4/request/Requests(ID=9cf94ce8-0baa-48fd-840d-37f96235a7e3,IsActiveEntity=true)/submit
+# Content-Type: application/json
+
+GET http://localhost:4004/odata/v4/request/Requests(ID=f2023716-260c-4727-b92c-2dcb180ddb72,IsActiveEntity=true)/steps
