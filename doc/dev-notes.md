@@ -12,3 +12,13 @@
 - SideEffects annotation fixes status refresh after submit (proper SAP pattern, not a workaround)
 - Committed to dev branch
 - Next: approval-handler.js (approve + reject actions)
+
+## 2026-04-11
+- approve() and reject() action handlers fully implemented
+- Guard 1: request status check (must be IN_APPROVAL)
+- Guard 2: active step lookup (by request_ID + stepStatus ACTIVE)
+- Parallel approval path handled via pendingSteps.length check
+- AuditLog entries on approve and reject working
+- Mock users configured in package.json (manager, finance, requester)
+- README merge conflict resolved
+- Next: xs-security.json scopes + @requires annotations in service.cds
