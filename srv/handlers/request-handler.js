@@ -1,12 +1,11 @@
-console.log('FILE LOADED')
 const cds = require('@sap/cds');
 
 module.exports = (srv) => {
   const { Request, ApprovalStep, AuditLog } = cds.entities('com.enterprise.approval');
 
-  srv.before('CREATE', 'Requests', async (req) => {
-    console.log('CREATE event:', req.data);
-  });
+  // srv.before('CREATE', 'Requests', async (req) => {
+  //   console.log('CREATE event:', req.data);
+  // });
 
   srv.on('submit', 'Requests', async (req) => {
     const { ID } = req.params[0];
