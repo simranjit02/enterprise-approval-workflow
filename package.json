@@ -1,7 +1,7 @@
 {
-  "name": "CAPSphere",
+  "name": "enterprise-approval-workflow",
   "version": "1.0.0",
-  "description": "A simple CAP project.",
+  "description": "Enterprise Approval Workflow built with SAP CAP, XSUAA and SAP Build Process Automation.",
   "dependencies": {
     "@sap/cds": "^9",
     "express": "^4",
@@ -13,14 +13,33 @@
   },
   "scripts": {
     "start": "cds-serve",
-    "watch-project1": "cds watch --open project1/index.html?sap-ui-xx-viewCache=false --livereload false",
     "watch-approval-ui": "cds watch --open approvalui/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "private": true,
   "cds": {
     "requires": {
-      "[production]": {
-        "auth": "mocked"
+      "auth": {
+        "kind": "mocked",
+        "users": {
+          "manager@company.com": {
+            "password": "manager",
+            "roles": [
+              "Manager"
+            ]
+          },
+          "finance@company.com": {
+            "password": "finance",
+            "roles": [
+              "Finance"
+            ]
+          },
+          "requester@company.com": {
+            "password": "requester",
+            "roles": [
+              "Requester"
+            ]
+          }
+        }
       }
     }
   },
@@ -28,7 +47,6 @@
     "app/*"
   ],
   "sapux": [
-    "app/project1",
     "app/approval-ui"
   ]
 }

@@ -93,7 +93,21 @@ annotate service.Requests with @(
                 {$String: 'DRAFT'}
             ]}
         ]}}
-    }, ],
+    },
+        {
+            $Type : 'UI.DataFieldForAction',
+            Action : 'Request.approve',
+            Label : 'Approve',
+            Determining : true,
+            Criticality : #Positive,
+        },
+        {
+            $Type : 'UI.DataFieldForAction',
+            Action : 'Request.reject',
+            Label : 'Reject',
+            Determining : true,
+            Criticality : #Negative,
+        }, ],
 );
 
 annotate service.Requests with {
@@ -123,6 +137,16 @@ annotate service.Requests with {
 };
 annotate service.Requests with actions {
   submit @(
+    Common.SideEffects: {
+      TargetProperties: ['status']
+    }
+  );
+  approve @(
+    Common.SideEffects: {
+      TargetProperties: ['status']
+    }
+  );
+  reject @(
     Common.SideEffects: {
       TargetProperties: ['status']
     }
