@@ -1,0 +1,63 @@
+const cds = require('@sap/cds');
+
+module.exports = (srv) => {
+
+    const { Request, ApprovalStep, AuditLog } = cds.entities('com.enterprise.approval')
+    srv.on('approve', 'Requests', async (req) => {
+        const { ID } = req.params[0]
+        const request = await SELECT.one.from(Request).where({ ID });
+        if (request.status !== 'IN_APPROVAL') {
+            return req.error(400, 'Request is not available for approval');
+        }
+        const step = await SELECT.one.from(ApprovalStep)
+            .where({ request_ID: ID, stepStatus: 'ACTIVE' })
+        if (!step) {
+            return req.error(403, 'No active step found for you');
+        }
+        await UPDATE(ApprovalStep).set({ stepStatus: 'COMPLETED', decision: "APPROVED", decidedAt: new Date() }).where({ ID: step.ID });
+        const pendingSteps = await SELECT.from(ApprovalStep)
+            .where({ request_ID: ID, decision: 'PENDING' })
+        if (!pendingSteps.length) {
+            await UPDATE(Request).set({ status: 'APPROVED' }).where({ ID });
+
+        }
+
+        await INSERT.into(AuditLog).entries({
+            request_ID: ID,
+            entityName: 'Request',
+            entityId: ID,
+            action: 'APPROVE',
+            oldValue: request.status,
+            newValue: "APPROVED",
+            performedBy: req.user.id
+        })
+        return await SELECT.one.from(Request).where({ ID })
+
+    })
+    srv.on('reject', 'Requests', async (req) => {
+        const { ID } = req.params[0]
+        const request = await SELECT.one.from(Request).where({ ID });
+        if (request.status !== 'IN_APPROVAL') {
+            return req.error(400, 'Request is not available for approval');
+        }
+        const step = await SELECT.one.from(ApprovalStep)
+            .where({ request_ID: ID, stepStatus: 'ACTIVE' })
+        if (!step) {
+            return req.error(403, 'No active step found for you');
+        }
+        await UPDATE(ApprovalStep).set({ stepStatus: 'COMPLETED', decision: "REJECTED", decidedAt: new Date() }).where({ ID: step.ID });
+        await UPDATE(Request).set({ status: 'REJECTED' }).where({ ID });
+
+        await INSERT.into(AuditLog).entries({
+            request_ID: ID,
+            entityName: 'Request',
+            entityId: ID,
+            action: 'REJECT',
+            oldValue: request.status,
+            newValue: "REJECTED",
+            performedBy: req.user.id
+        })
+        return await SELECT.one.from(Request).where({ ID })
+
+    })
+}
