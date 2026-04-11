@@ -1,25 +1,26 @@
-# Getting Started
+# Enterprise Approval Workflow
 
-Welcome to your new project.
+A full-stack enterprise approval system built with SAP CAP, SAP Fiori Elements, and XSUAA.
 
-It contains these folders and files, following our recommended project layout:
+## Tech Stack
+- SAP CAP (Node.js)
+- SAP Fiori Elements (UI5)
+- SQLite (local) / SAP HANA Cloud (production)
+- XSUAA (authentication)
 
-File or Folder | Purpose
----------|----------
-`app/` | content for UI frontends goes here
-`db/` | your domain models and data go here
-`srv/` | your service models and code go here
-`package.json` | project metadata and configuration
-`readme.md` | this getting started guide
+## Features
+- Multi-step approval workflow
+- Parallel approval path for high-value requests
+- Audit logging
+- Role-based access control
 
+## Setup
+npm install
+cds watch
 
-## Next Steps
-
-- Open a new terminal and run `cds watch`
-- (in VS Code simply choose _**Terminal** > Run Task > cds watch_)
-- Start adding content, for example, a [db/schema.cds](db/schema.cds).
-
-
-## Learn More
-
-Learn more at https://cap.cloud.sap/docs/get-started/.
+## Mock Users
+| User | Password | Role |
+|------|----------|------|
+| manager@company.com | manager | Manager |
+| finance@company.com | finance | Finance |
+| requester@company.com | requester | Requester |
