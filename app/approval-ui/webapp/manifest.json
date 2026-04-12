@@ -17,7 +17,7 @@
     },
     "dataSources": {
       "mainService": {
-        "uri": "/odata/v4/request/",
+        "uri": "/odata/v4/approval/",
         "type": "OData",
         "settings": {
           "annotations": [],
@@ -137,7 +137,7 @@
               "controlConfiguration": {
                 "@com.sap.vocabularies.UI.v1.Identification": {
                   "actions": {
-                    "Request.submit": {
+                    "ApprovalService.submit": {
                       "afterExecution": {
                         "navigateToInstance": true
                       }

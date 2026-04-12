@@ -19,12 +19,12 @@
 
 
 
-# GET http://localhost:4004/odata/v4/request/Requests
+GET http://localhost:4004/odata/v4/request/Requests
 # GET http://localhost:4004/odata/v4/request/AuditLogs
 # GET http://localhost:4004/odata/v4/request/Requests(ID=9cf94ce8-0baa-48fd-840d-37f96235a7e3,IsActiveEntity=true)
 
 # POST http://localhost:4004/odata/v4/request/Requests(ID=9cf94ce8-0baa-48fd-840d-37f96235a7e3,IsActiveEntity=true)/submit
 # Content-Type: application/json
 
-GET http://localhost:4004/odata/v4/request/Requests(ID=f2023716-260c-4727-b92c-2dcb180ddb72,IsActiveEntity=true)/steps
+# GET http://localhost:4004/odata/v4/request/Requests(ID=f2023716-260c-4727-b92c-2dcb180ddb72,IsActiveEntity=true)/steps
 # POST http://localhost:4004/odata/v4/request/Requests(ID=f2023716-260c-4727-b92c-2dcb180ddb72,IsActiveEntity=true)/approve
