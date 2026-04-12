@@ -1,5 +1,83 @@
 {
-  "scopes": [],
+  "xsappname": "enterprise-approval-workflow",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.Requester",
+      "description": "Can create, view own requests, and submit for approval"
+    },
+    {
+      "name": "$XSAPPNAME.Manager",
+      "description": "Can view assigned requests and approve or reject them"
+    },
+    {
+      "name": "$XSAPPNAME.Finance",
+      "description": "Can view and act on finance approval steps for high-value requests"
+    },
+    {
+      "name": "$XSAPPNAME.Admin",
+      "description": "Full read access including audit logs and workflow instances"
+    }
+  ],
   "attributes": [],
-  "role-templates": []
+  "role-templates": [
+    {
+      "name": "Requester",
+      "description": "Role for employees submitting purchase approval requests",
+      "scope-references": [
+        "$XSAPPNAME.Requester"
+      ]
+    },
+    {
+      "name": "Manager",
+      "description": "Role for managers approving requests between 1,000 and 5,000",
+      "scope-references": [
+        "$XSAPPNAME.Manager"
+      ]
+    },
+    {
+      "name": "Finance",
+      "description": "Role for finance team approving high-value requests above 5,000",
+      "scope-references": [
+        "$XSAPPNAME.Finance"
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Role for administrators monitoring workflow state and audit trails",
+      "scope-references": [
+        "$XSAPPNAME.Admin"
+      ]
+    }
+  ],
+  "role-collections": [
+    {
+      "name": "Approval_Requester",
+      "description": "Grants access to submit and track purchase requests",
+      "role-template-references": [
+        "$XSAPPNAME.Requester"
+      ]
+    },
+    {
+      "name": "Approval_Manager",
+      "description": "Grants access to review and approve requests up to 5,000",
+      "role-template-references": [
+        "$XSAPPNAME.Manager"
+      ]
+    },
+    {
+      "name": "Approval_Finance",
+      "description": "Grants access to finance approval queue",
+      "role-template-references": [
+        "$XSAPPNAME.Finance"
+      ]
+    },
+    {
+      "name": "Approval_Admin",
+      "description": "Full monitoring access",
+      "role-template-references": [
+        "$XSAPPNAME.Admin"
+      ]
+    }
+  ]
 }

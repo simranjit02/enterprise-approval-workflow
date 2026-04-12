@@ -1,14 +1,17 @@
 namespace com.enterprise.approval;
 
-using { managed, cuid } from '@sap/cds/common';
+using {
+    managed,
+    cuid
+} from '@sap/cds/common';
 
-type Decision : String enum {
+type Decision        : String enum {
     PENDING;
     APPROVED;
     REJECTED;
 }
 
-type Status : String enum {
+type Status          : String enum {
     DRAFT;
     SUBMITTED;
     IN_APPROVAL;
@@ -23,7 +26,7 @@ type ExecutionStatus : String enum {
     FAILED;
 }
 
-type WorkflowStatus : String enum {
+type WorkflowStatus  : String enum {
     STARTED;
     RUNNING;
     COMPLETED;
@@ -31,7 +34,7 @@ type WorkflowStatus : String enum {
     FAILED;
 }
 
-type StepStatus : String enum {
+type StepStatus      : String enum {
     PENDING;
     ACTIVE;
     COMPLETED;
@@ -39,28 +42,28 @@ type StepStatus : String enum {
 }
 
 entity Request : cuid, managed {
-    title       : String(100);
-    description : String(500);
-    amount      : Decimal(15,2);
-    currency    : String(5);
-    status      : Status default 'DRAFT';
-    steps : Composition of many ApprovalStep
-        on steps.request = $self;
-    workflows : Association to many WorkflowInstance
-        on workflows.request = $self;
+    title         : String(100);
+    description   : String(500);
+    amount        : Decimal(15, 2);
+    currency      : String(5);
+    status        : Status default 'DRAFT';
+    steps         : Composition of many ApprovalStep
+                        on steps.request = $self;
+    workflows     : Association to many WorkflowInstance
+                        on workflows.request = $self;
     executionLogs : Association to many BusinessExecutionLog
-        on executionLogs.request = $self;
-    auditLogs : Association to many AuditLog
-        on auditLogs.request = $self;
+                        on executionLogs.request = $self;
+    auditLogs     : Association to many AuditLog
+                        on auditLogs.request = $self;
 }
 
 entity ApprovalStep : cuid, managed {
     request        : Association to Request not null;
     stepNumber     : Integer not null;
     approverUserId : String(100) not null;
-    approverRole   : String(50)  not null;
+    approverRole   : String(50) not null;
     stepStatus     : StepStatus default 'PENDING' not null;
-    decision       : Decision   default 'PENDING' not null;
+    decision       : Decision default 'PENDING' not null;
     comment        : String(500);
     decidedAt      : Timestamp;
 }

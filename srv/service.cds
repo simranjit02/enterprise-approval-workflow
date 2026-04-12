@@ -1,14 +1,73 @@
 using {com.enterprise.approval as db} from '../db/schema';
 
-service Request {
+@requires: 'authenticated-user'
+@path    : 'approval'
+service ApprovalService {
+
+  @restrict: [
+    {
+      grant: [
+        'CREATE',
+        'READ',
+        'WRITE'
+      ],
+      to   : 'Requester'
+    },
+    {
+      grant: ['READ'],
+      to   : [
+        'Manager',
+        'Finance',
+        'Admin'
+      ]
+    }
+  ]
   @odata.draft.enabled
+
   entity Requests      as projection on db.Request
     actions {
+      @restrict: [{
+        grant: 'WRITE',
+        to   : 'Requester'
+      }]
       action submit()  returns Requests;
+      @restrict: [{
+        grant: 'WRITE',
+        to   : [
+          'Manager',
+          'Finance'
+        ]
+      }]
       action approve() returns Requests;
+      @restrict: [{
+        grant: 'WRITE',
+        to   : [
+          'Manager',
+          'Finance'
+        ]
+      }]
       action reject()  returns Requests;
     };
 
+  @restrict: [{
+    grant: 'READ',
+    to   : [
+      'Manager',
+      'Finance',
+      'Admin'
+    ]
+  }]
   entity ApprovalSteps as projection on db.ApprovalStep;
+
+  @restrict: [{
+    grant: 'READ',
+    to   : [
+      'Requester',
+      'Manager',
+      'Finance',
+      'Admin'
+    ]
+  }]
   entity AuditLogs     as projection on db.AuditLog;
+
 }
