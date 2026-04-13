@@ -21,6 +21,15 @@
       "auth": {
         "kind": "mocked",
         "users": {
+          "test@company.com": {
+            "password": "test",
+            "roles": [
+              "Requester",
+              "Manager",
+              "Finance",
+              "Admin"
+            ]
+          },
           "manager@company.com": {
             "password": "manager",
             "roles": [

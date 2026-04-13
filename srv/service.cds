@@ -30,7 +30,7 @@ service ApprovalService {
         grant: 'WRITE',
         to   : 'Requester'
       }]
-      action submit()  returns Requests;
+      action submit()                returns Requests;
       @restrict: [{
         grant: 'WRITE',
         to   : [
@@ -38,7 +38,7 @@ service ApprovalService {
           'Finance'
         ]
       }]
-      action approve() returns Requests;
+      action approve()               returns Requests;
       @restrict: [{
         grant: 'WRITE',
         to   : [
@@ -46,7 +46,7 @@ service ApprovalService {
           'Finance'
         ]
       }]
-      action reject()  returns Requests;
+      action reject(comment: String) returns Requests;
     };
 
   @restrict: [{

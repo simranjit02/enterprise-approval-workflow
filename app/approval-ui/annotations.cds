@@ -84,9 +84,16 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
-                {$Ne: [
-                    {$Path: 'status'},
-                    {$String: 'DRAFT'}
+
+                {$And: [
+                    {$Ne: [
+                        {$Path: 'status'},
+                        'DRAFT'
+                    ]},
+                    {$Ne: [
+                        {$Path: 'status'},
+                        'REJECTED'
+                    ]},
                 ]}
             ]}}
         },
