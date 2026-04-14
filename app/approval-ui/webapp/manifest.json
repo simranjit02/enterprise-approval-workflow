@@ -143,6 +143,19 @@
                       }
                     }
                   }
+                },
+                "steps/@com.sap.vocabularies.UI.v1.LineItem": {
+                  "columns": {
+                    "DataField::approverRole": {
+                      "width": "120px"
+                    },
+                    "DataField::approverUserId": {
+                      "width": "200px"
+                    },
+                    "DataField::decision": {
+                      "width": "140px"
+                    }
+                  }
                 }
               }
             }

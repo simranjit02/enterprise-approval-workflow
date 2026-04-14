@@ -60,6 +60,7 @@ entity Request : cuid, managed {
 entity ApprovalStep : cuid, managed {
     request        : Association to Request not null;
     stepNumber     : Integer not null;
+    runNumber  : Integer default 1;
     approverUserId : String(100) not null;
     approverRole   : String(50) not null;
     stepStatus     : StepStatus default 'PENDING' not null;
