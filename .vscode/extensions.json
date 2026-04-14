@@ -4,6 +4,7 @@
 		"dbaeumer.vscode-eslint",
 		"mechatroner.rainbow-csv",
 		"qwtel.sqlite-viewer",
-		"humao.rest-client"
+		"humao.rest-client",
+		"prettier.prettier-vscode"
 	]
 }
