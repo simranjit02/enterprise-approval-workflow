@@ -57,8 +57,9 @@ service ApprovalService {
       'Admin'
     ]
   }]
-  entity ApprovalSteps as projection on db.ApprovalStep;
 
+entity ApprovalSteps as select from db.ApprovalStep
+    order by runNumber asc, stepNumber asc;
   @restrict: [{
     grant: 'READ',
     to   : [

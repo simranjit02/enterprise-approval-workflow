@@ -25,19 +25,43 @@ annotate service.Requests with @(
                 Value: currency,
             },
             {
-                $Type: 'UI.DataField',
-                Label: 'Status',
-                Value: status,
+                $Type      : 'UI.DataField',
+                Label      : 'Status',
+                Value      : status,
+                Criticality: {$edmJson: {$If: [
+                    {$Eq: [
+                        {$Path: 'status'},
+                        'APPROVED'
+                    ]},
+                    3,
+                    {$If: [
+                        {$Eq: [
+                            {$Path: 'status'},
+                            'REJECTED'
+                        ]},
+                        1,
+                        2
+                    ]}
+                ]}},
             },
         ],
     },
-    UI.Facets                    : [{
-        $Type : 'UI.ReferenceFacet',
-        ID    : 'GeneratedFacet1',
-        Label : 'General Information',
-        Target: '@UI.FieldGroup#GeneratedGroup',
-    }],
+    UI.Facets                    : [
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID    : 'GeneratedFacet1',
+            Label : 'General Information',
+            Target: '@UI.FieldGroup#GeneratedGroup',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID    : 'ApprovalStepsFacet',
+            Label : 'Approval Steps',
+            Target: 'steps/@UI.LineItem',
+        }
+    ],
     UI.LineItem                  : [
+
         {
             $Type: 'UI.DataField',
             Label: 'Title',
@@ -57,6 +81,7 @@ annotate service.Requests with @(
             $Type: 'UI.DataField',
             Label: 'Status',
             Value: status,
+
         },
     ],
     UI.HeaderInfo                : {
@@ -114,6 +139,83 @@ annotate service.Requests with @(
     ],
 );
 
+annotate service.ApprovalSteps with @(UI.LineItem: [
+    {
+        $Type         : 'UI.DataField',
+        Value         : runNumber,
+        Label         : 'Attempt',
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Step',
+        Value         : stepNumber,
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Approver Role',
+        Value         : approverRole,
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Approver',
+        Value         : approverUserId,
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Rejection Reason',
+        Value         : comment,
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Decision',
+        Value         : decision,
+        Criticality   : {$edmJson: {$If: [
+            {$Eq: [
+                {$Path: 'decision'},
+                'APPROVED'
+            ]},
+            3,
+            {$If: [
+                {$Eq: [
+                    {$Path: 'decision'},
+                    'REJECTED'
+                ]},
+                1,
+                2
+            ]}
+        ]}},
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Status',
+        Value         : stepStatus,
+        @UI.Importance: #High,
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Decided At',
+        Value         : decidedAt,
+        @UI.Importance: #Medium,
+    },
+], );
+
+annotate service.ApprovalSteps with @(UI.PresentationVariant: {SortOrder: [
+    {
+        Property  : runNumber,
+        Descending: false
+    },
+    {
+        Property  : stepNumber,
+        Descending: false
+    },
+], }, );
+
 annotate service.Requests with {
     title       @Common.FieldControl: #Mandatory;
     description @Common.FieldControl: #Mandatory;
@@ -127,6 +229,12 @@ annotate service.Requests with {
 
 annotate service.Requests with actions {
     submit  @(Common.SideEffects: {TargetProperties: ['status']});
-    approve @(Common.SideEffects: {TargetProperties: ['status']});
-    reject  @(Common.SideEffects: {TargetProperties: ['status']});
+    approve @(Common.SideEffects: {
+        TargetProperties: ['status'],
+        TargetEntities  : [in.steps]
+    });
+    reject  @(Common.SideEffects: {
+        TargetProperties: ['status'],
+        TargetEntities  : [in.steps]
+    });
 };

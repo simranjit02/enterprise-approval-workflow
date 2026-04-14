@@ -55,6 +55,9 @@ module.exports = (srv) => {
     if (!step) {
       return req.error(403, "No active step found for you");
     }
+    // if (step.approverUserId !== req.user.id) {
+    //   return req.error(403, "You are not the assigned approver for this step");
+    // }
     await UPDATE(ApprovalStep)
       .set({
         stepStatus: "COMPLETED",
@@ -62,7 +65,11 @@ module.exports = (srv) => {
         comment: req.data.comment || "No reason provided",
         decidedAt: new Date(),
       })
+
       .where({ ID: step.ID });
+    await UPDATE(ApprovalStep)
+      .set({ stepStatus: "SKIPPED", decision: "PENDING" })
+      .where({ request_ID: ID, stepStatus: "ACTIVE" });
     await UPDATE(Request).set({ status: "REJECTED" }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,

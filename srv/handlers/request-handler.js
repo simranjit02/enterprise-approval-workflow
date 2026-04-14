@@ -51,6 +51,7 @@ module.exports = (srv) => {
         approverRole: "Manager",
         approverUserId: "manager@company.com",
         stepStatus: "ACTIVE",
+        runNumber: runNumber,
         decision: "PENDING",
       });
       steps.push({
@@ -59,6 +60,7 @@ module.exports = (srv) => {
         approverRole: "Finance",
         approverUserId: "finance@company.com",
         stepStatus: "ACTIVE",
+        runNumber: runNumber,
         decision: "PENDING",
       });
     }
