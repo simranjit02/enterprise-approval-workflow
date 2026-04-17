@@ -1,11 +1,13 @@
 # Dev Notes
 
 ## 2026-04-08
+
 - Code review done — schema strong, gaps identified (stubs, empty XSUAA, README conflict)
 - Decided: Kyma paused, certification deferred, focus = CF stack
 - BPMN v3 produced but layout still messy — vertical version pending
 
 ## 2026-04-09
+
 - submit() action fully working — DRAFT → IN_APPROVAL state machine
 - ApprovalStep creation based on amount threshold (≤5000 manager only, >5000 manager + finance)
 - AuditLog entries on submission working
@@ -14,6 +16,7 @@
 - Next: approval-handler.js (approve + reject actions)
 
 ## 2026-04-11
+
 - approve() and reject() action handlers fully implemented
 - Guard 1: request status check (must be IN_APPROVAL)
 - Guard 2: active step lookup (by request_ID + stepStatus ACTIVE)

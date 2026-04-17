@@ -35,7 +35,7 @@ The App Router is the single entry point. Users never access the CAP service dir
 This is the most important deployment file. It describes every module (app) and resource (service) that needs to be created and how they connect.
 
 ```yaml
-modules:   # Applications deployed to CF
+modules: # Applications deployed to CF
 resources: # Service instances created in BTP
 ```
 
@@ -81,6 +81,7 @@ The App Router is a Node.js application. This `package.json` tells CF what to in
 ```
 
 This file tells the App Router how to route requests:
+
 - Requests to `/odata/*` go to the CAP backend via the `srv-api` destination
 - Everything else is served from the HTML5 Repo Runtime (your Fiori UI)
 - All routes require XSUAA authentication
@@ -109,6 +110,7 @@ builder:
 ```
 
 This tells the UI5 build tool to:
+
 1. Build the UI5 application
 2. Package it into `approvalui.zip`
 3. Include `xs-app.json` in the zip (the HTML5 Repo needs it)
@@ -122,6 +124,7 @@ Defines scopes, role templates, and role collections. Deployed automatically whe
 ## MTA Modules Explained
 
 ### `enterprise-approval-workflow-srv`
+
 The CAP Node.js backend. Deployed from `gen/srv` (the CDS build output).
 
 ```yaml
@@ -134,21 +137,23 @@ build-parameters:
 `npm-ci` is used instead of `npm install` for reproducible builds — it installs exactly what's in `package-lock.json`.
 
 ### `enterprise-approval-workflow` (App Router)
+
 The standalone App Router.
 
 ```yaml
 type: approuter.nodejs
 path: app/router
 requires:
-  - name: enterprise-approval-workflow-auth     # XSUAA for token validation
-  - name: enterprise-approval-workflow-html5-runtime  # Serves UI files
-  - name: enterprise-approval-workflow-destination    # Destination service
-  - name: srv-api                               # CAP backend URL
+  - name: enterprise-approval-workflow-auth # XSUAA for token validation
+  - name: enterprise-approval-workflow-html5-runtime # Serves UI files
+  - name: enterprise-approval-workflow-destination # Destination service
+  - name: srv-api # CAP backend URL
 ```
 
 **Critical:** The approuter must bind to `html5-apps-repo` with plan `app-runtime` (NOT `app-host`). Using `app-host` causes `Missing required property: grant_type` error on startup.
 
 ### `enterprise-approval-workflow-db-deployer`
+
 Deploys the HDI (HANA Deployment Infrastructure) artifacts to HANA Cloud. Creates the database tables from the CDS schema.
 
 ```yaml
@@ -159,6 +164,7 @@ path: gen/db
 Runs once at deployment, exits when done.
 
 ### `enterprise-approval-workflow-app-content`
+
 Uploads the Fiori UI zip to the HTML5 Repository.
 
 ```yaml
@@ -166,10 +172,11 @@ type: com.sap.application.content
 requires:
   - name: enterprise-approval-workflow-html5-host
     parameters:
-      content-target: true  # Upload here
+      content-target: true # Upload here
 ```
 
 ### `approvalui`
+
 Builds the Fiori UI from source.
 
 ```yaml
@@ -189,6 +196,7 @@ build-parameters:
 ## MTA Resources Explained
 
 ### HANA HDI Container
+
 ```yaml
 - name: enterprise-approval-workflow-db
   type: com.sap.xs.hdi-container
@@ -200,6 +208,7 @@ build-parameters:
 Creates an isolated schema in your HANA Cloud instance. Multiple projects can share the same HANA Cloud instance — each gets its own HDI container with separate tables. Free tier allows only ONE HANA Cloud instance but many HDI containers.
 
 ### XSUAA
+
 ```yaml
 - name: enterprise-approval-workflow-auth
   type: org.cloudfoundry.managed-service
@@ -212,6 +221,7 @@ Creates an isolated schema in your HANA Cloud instance. Multiple projects can sh
 Creates the XSUAA service instance and configures it with your scopes and role collections from `xs-security.json`.
 
 ### HTML5 App Host
+
 ```yaml
 - name: enterprise-approval-workflow-html5-host
   parameters:
@@ -222,6 +232,7 @@ Creates the XSUAA service instance and configures it with your scopes and role c
 Stores your UI files. Think of it as a CDN for your Fiori app.
 
 ### HTML5 App Runtime
+
 ```yaml
 - name: enterprise-approval-workflow-html5-runtime
   parameters:
@@ -232,6 +243,7 @@ Stores your UI files. Think of it as a CDN for your Fiori app.
 Serves your UI files at runtime. The App Router binds to this to fetch and serve the UI to users. **Must be `app-runtime`, not `app-host`.**
 
 ### Destination Service
+
 ```yaml
 - name: enterprise-approval-workflow-destination
   parameters:
@@ -285,40 +297,51 @@ cds add hana --for production
 ## Lessons Learned
 
 ### 1. Service name mismatches kill deployments
+
 If you create any service manually in BTP Cockpit before deploying, it gets a generated suffix in its name (e.g. `enterprise-approval-workflow-html5-app-hos1950b391`). Your `mta.yaml` won't know this name. Either delete the manual service before deploying, or update `mta.yaml` to use the exact generated name.
 
 **Rule:** Let `mta.yaml` create all services. Never create services manually first.
 
 ### 2. App Router must use `app-runtime`, not `app-host`
+
 The HTML5 Repo has two plans:
+
 - `app-host` — for uploading/storing UI files
 - `app-runtime` — for serving/reading UI files at runtime
 
 The App Router needs `app-runtime`. Using `app-host` causes the cryptic error: `html5-repo-credentials: Missing required property: grant_type`. This is because `app-host` credentials don't include OAuth flow information that the approuter expects.
 
 ### 3. Both `xs-app.json` files must exist
+
 - `app/router/xs-app.json` — used by the running App Router to route requests
 - `app/approval-ui/xs-app.json` — used by `ui5-task-zipper` during build to include in the zip
 
 They have the same content but both must exist. Missing the UI one causes build failure.
 
 ### 4. `package-lock.json` must be in sync before `mbt build`
+
 `mbt build` runs `npm ci` which requires `package-lock.json` to be perfectly in sync with `package.json`. After adding any new dependency, always run `npm install` first to update the lock file.
 
 ### 5. Always access the app via the App Router URL
+
 The CAP service has its own URL but requests to it directly bypass authentication. Always use the App Router URL:
+
 ```
-https://54b71380trial-dev-enterprise-approval-workflow.cfapps.us10-001.hana.ondemand.com
+https://<org>-<space>-dev-enterprise-approval-workflow.cfapps.us10-001.hana.ondemand.com
 ```
+
 Not the srv URL:
+
 ```
-https://54b71380trial-dev-enterprise-approval-workflow-srv.cfapps.us10-001.hana.ondemand.com
+https://<org>-<space>-dev-enterprise-approval-workflow-srv.cfapps.us10-001.hana.ondemand.com
 ```
 
 ### 6. Assign role collections after every fresh deployment
+
 Role collections are created by XSUAA but not assigned to any user. After deployment you must go to BTP Cockpit → Security → Users → your user → Assign Role Collections manually.
 
 ### 7. `cds add mta` + `cds add xsuaa` + `cds add hana` is the right starting point
+
 Don't write `mta.yaml` from scratch. Use the CAP CLI commands — they generate the correct structure with proper bindings and profiles. Then add only what's missing (HTML5 host/runtime resources, approuter module).
 
 ---

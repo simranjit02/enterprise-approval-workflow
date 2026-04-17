@@ -128,17 +128,15 @@ A JWT token has three parts: header, payload, signature. The payload for a Manag
   "sub": "manager@company.com",
   "user_name": "manager@company.com",
   "email": "manager@company.com",
-  "scope": [
-    "enterprise-approval-workflow.Manager",
-    "openid"
-  ],
+  "scope": ["enterprise-approval-workflow.Manager", "openid"],
   "iat": 1713348000,
   "exp": 1713351600,
-  "iss": "https://54b71380trial.authentication.us10.hana.ondemand.com/oauth/token"
+  "iss": "https://<org>-<space>.authentication.us10.hana.ondemand.com/oauth/token"
 }
 ```
 
 **Key fields:**
+
 - `sub` / `user_name` — becomes `req.user.id` in CAP
 - `scope` — the roles this user has — CAP checks these against `@restrict`
 - `exp` — expiry timestamp — XSUAA tokens expire, forcing re-authentication
@@ -168,6 +166,7 @@ The token is signed with XSUAA's private key. `@sap/xssec` validates the signatu
 ```
 
 This block configures mock authentication for local development. When `cds watch` runs, CAP uses this instead of real XSUAA. The mock middleware:
+
 1. Reads the `Authorization: Basic` header (base64 encoded `email:password`)
 2. Looks up the user in this config
 3. Populates `req.user.id` with the email and `req.user.roles` with the roles array
@@ -228,11 +227,13 @@ CAP automatically switches to XSUAA auth when `NODE_ENV=production` (set by Clou
 After deploying, role collections defined in `xs-security.json` are created automatically in XSUAA. But they're not assigned to any users yet.
 
 **To assign in BTP Cockpit:**
+
 1. Security → Users
 2. Select your user
 3. Assign Role Collections → select from the list
 
 For testing all roles with one user, assign all four:
+
 - `Approval_Requester`
 - `Approval_Manager`
 - `Approval_Finance`
@@ -244,10 +245,10 @@ In production, each real user would have only one role collection assigned match
 
 ## Common Issues and Fixes
 
-| Issue | Cause | Fix |
-|---|---|---|
-| 401 on all requests | No valid JWT in request | Check approuter is running and forwarding token |
-| 403 on specific operations | User missing required role | Assign correct role collection in BTP Cockpit |
-| `req.user.id` returns `anonymous` | Mock users in wrong config section | Move mock users to top-level `cds.requires`, not `[production]` |
-| Login redirects fail | Redirect URI not whitelisted | Add approuter URL to `redirect-uris` in `xs-security.json` |
-| `grant_type` error on approuter start | Wrong HTML5 repo plan | Bind approuter to `app-runtime` plan, not `app-host` |
+| Issue                                 | Cause                              | Fix                                                             |
+| ------------------------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| 401 on all requests                   | No valid JWT in request            | Check approuter is running and forwarding token                 |
+| 403 on specific operations            | User missing required role         | Assign correct role collection in BTP Cockpit                   |
+| `req.user.id` returns `anonymous`     | Mock users in wrong config section | Move mock users to top-level `cds.requires`, not `[production]` |
+| Login redirects fail                  | Redirect URI not whitelisted       | Add approuter URL to `redirect-uris` in `xs-security.json`      |
+| `grant_type` error on approuter start | Wrong HTML5 repo plan              | Bind approuter to `app-runtime` plan, not `app-host`            |
