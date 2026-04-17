@@ -3,12 +3,14 @@
   "version": "1.0.0",
   "description": "Enterprise Approval Workflow built with SAP CAP, XSUAA and SAP Build Process Automation.",
   "dependencies": {
+    "@cap-js/hana": "^2",
     "@sap/cds": "^9",
-    "express": "^4",
-    "@sap/xssec": "^4"
+    "@sap/xssec": "^4",
+    "express": "^4"
   },
   "devDependencies": {
     "@cap-js/sqlite": "^2",
+    "@sap/cds-dk": "^9",
     "cds-plugin-ui5": "^0.13.0"
   },
   "scripts": {
@@ -49,6 +51,12 @@
             ]
           }
         }
+      },
+      "[production]": {
+        "auth": {
+          "kind": "xsuaa"
+        },
+        "db": "hana"
       }
     }
   },
