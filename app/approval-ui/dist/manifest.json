@@ -1,0 +1,207 @@
+{
+	"_version": "1.82.0",
+	"sap.app": {
+		"id": "approvalui",
+		"type": "application",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			]
+		},
+		"applicationVersion": {
+			"version": "0.0.1"
+		},
+		"title": "{{appTitle}}",
+		"description": "{{appDescription}}",
+		"resources": "resources.json",
+		"sourceTemplate": {
+			"id": "@sap/generator-fiori:lrop",
+			"version": "1.20.4",
+			"toolsId": "8047213b-8f70-4de7-b0db-4b8731bb3eb5"
+		},
+		"dataSources": {
+			"mainService": {
+				"uri": "/odata/v4/approval/",
+				"type": "OData",
+				"settings": {
+					"annotations": [],
+					"odataVersion": "4.01",
+					"editableHeaderContent": false
+				}
+			}
+		},
+		"crossNavigation": {
+			"inbounds": {
+				"reqApproval-display": {
+					"semanticObject": "reqApproval",
+					"action": "display",
+					"title": "{{reqApproval-display.flpTitle}}",
+					"signature": {
+						"parameters": {},
+						"additionalParameters": "allowed"
+					}
+				}
+			}
+		}
+	},
+	"sap.ui": {
+		"technology": "UI5",
+		"icons": {
+			"icon": "",
+			"favIcon": "",
+			"phone": "",
+			"phone@2": "",
+			"tablet": "",
+			"tablet@2": ""
+		},
+		"deviceTypes": {
+			"desktop": true,
+			"tablet": true,
+			"phone": true
+		}
+	},
+	"sap.ui5": {
+		"flexEnabled": true,
+		"dependencies": {
+			"minUI5Version": "1.145.0",
+			"libs": {
+				"sap.m": {},
+				"sap.ui.core": {},
+				"sap.fe.templates": {}
+			}
+		},
+		"contentDensities": {
+			"compact": true,
+			"cozy": true
+		},
+		"models": {
+			"i18n": {
+				"type": "sap.ui.model.resource.ResourceModel",
+				"settings": {
+					"bundleName": "approvalui.i18n.i18n",
+					"supportedLocales": [
+						""
+					]
+				}
+			},
+			"": {
+				"dataSource": "mainService",
+				"preload": true,
+				"settings": {
+					"operationMode": "Server",
+					"autoExpandSelect": true,
+					"earlyRequests": true
+				}
+			},
+			"@i18n": {
+				"type": "sap.ui.model.resource.ResourceModel",
+				"uri": "i18n/i18n.properties",
+				"settings": {
+					"supportedLocales": [
+						""
+					]
+				}
+			}
+		},
+		"resources": {
+			"css": []
+		},
+		"routing": {
+			"config": {},
+			"routes": [
+				{
+					"pattern": ":?query:",
+					"name": "RequestsList",
+					"target": "RequestsList"
+				},
+				{
+					"pattern": "Requests({key}):?query:",
+					"name": "RequestsObjectPage",
+					"target": "RequestsObjectPage"
+				}
+			],
+			"targets": {
+				"RequestsList": {
+					"type": "Component",
+					"id": "RequestsList",
+					"name": "sap.fe.templates.ListReport",
+					"options": {
+						"settings": {
+							"contextPath": "/Requests",
+							"variantManagement": "Page",
+							"navigation": {
+								"Requests": {
+									"detail": {
+										"route": "RequestsObjectPage"
+									}
+								}
+							},
+							"controlConfiguration": {
+								"@com.sap.vocabularies.UI.v1.LineItem": {
+									"tableSettings": {
+										"type": "ResponsiveTable"
+									}
+								}
+							}
+						}
+					}
+				},
+				"RequestsObjectPage": {
+					"type": "Component",
+					"id": "RequestsObjectPage",
+					"name": "sap.fe.templates.ObjectPage",
+					"options": {
+						"settings": {
+							"editableHeaderContent": false,
+							"contextPath": "/Requests",
+							"refreshStrategyOnAppRestore": {
+								"intents": {
+									"*": "full"
+								}
+							},
+							"controlConfiguration": {
+								"@com.sap.vocabularies.UI.v1.Identification": {
+									"actions": {
+										"ApprovalService.submit": {
+											"afterExecution": {
+												"navigateToInstance": true
+											}
+										}
+									}
+								},
+								"steps/@com.sap.vocabularies.UI.v1.LineItem": {
+									"columns": {
+										"DataField::approverRole": {
+											"width": "120px"
+										},
+										"DataField::approverUserId": {
+											"width": "200px"
+										},
+										"DataField::decision": {
+											"width": "140px"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"flexBundle": false
+	},
+	"sap.fiori": {
+		"registrationIds": [],
+		"archeType": "transactional"
+	},
+	"sap.fe": {
+		"app": {
+			"enableLazyLoading": true
+		}
+	},
+	"sap.cloud": {
+		"public": true,
+		"service": "approval-workflow"
+	}
+}

@@ -25,6 +25,19 @@
           "editableHeaderContent": false
         }
       }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "reqApproval-display": {
+          "semanticObject": "reqApproval",
+          "action": "display",
+          "title": "{{reqApproval-display.flpTitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
   "sap.ui": {
@@ -172,5 +185,9 @@
     "app": {
       "enableLazyLoading": true
     }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "approval-workflow"
   }
 }
