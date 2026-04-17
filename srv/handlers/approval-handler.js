@@ -5,6 +5,7 @@ module.exports = (srv) => {
   const { Request, ApprovalStep, AuditLog } = cds.entities(
     "com.enterprise.approval",
   );
+
   srv.on("approve", "Requests", async (req) => {
     const { ID } = req.params[0];
     const request = await SELECT.one.from(Request).where({ ID });
@@ -16,6 +17,9 @@ module.exports = (srv) => {
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
     if (!step) {
       return req.error(403, "No active step found for you");
+    }
+    if (step.approverUserId !== req.user.id) {
+      return req.error(403, "You are not the assigned approver for this step");
     }
     await UPDATE(ApprovalStep)
       .set({
@@ -31,7 +35,6 @@ module.exports = (srv) => {
     if (!pendingSteps.length) {
       await UPDATE(Request).set({ status: "APPROVED" }).where({ ID });
     }
-
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "Request",
@@ -43,6 +46,7 @@ module.exports = (srv) => {
     });
     return await SELECT.one.from(Request).where({ ID });
   });
+
   srv.on("reject", "Requests", async (req) => {
     const { ID } = req.params[0];
     const request = await SELECT.one.from(Request).where({ ID });
@@ -55,9 +59,9 @@ module.exports = (srv) => {
     if (!step) {
       return req.error(403, "No active step found for you");
     }
-    // if (step.approverUserId !== req.user.id) {
-    //   return req.error(403, "You are not the assigned approver for this step");
-    // }
+    if (step.approverUserId !== req.user.id) {
+      return req.error(403, "You are not the assigned approver for this step");
+    }
     await UPDATE(ApprovalStep)
       .set({
         stepStatus: "COMPLETED",
@@ -65,7 +69,6 @@ module.exports = (srv) => {
         comment: req.data.comment || "No reason provided",
         decidedAt: new Date(),
       })
-
       .where({ ID: step.ID });
     await UPDATE(ApprovalStep)
       .set({ stepStatus: "SKIPPED", decision: "PENDING" })

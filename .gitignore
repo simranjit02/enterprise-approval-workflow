@@ -1,4 +1,4 @@
-# CAP CAPSphere
+# CAP
 _out
 *.db
 *.sqlite
@@ -18,11 +18,14 @@ target/
 *.mtar
 mta_archives/
 
+# UI5 Build Output
+dist/
+resources/
+
 # Other
 .DS_Store
 *.orig
 *.log
-
 *.iml
 *.flattened-pom.xml
 
