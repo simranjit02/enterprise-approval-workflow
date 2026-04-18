@@ -24,7 +24,7 @@ service ApprovalService {
   ]
   @odata.draft.enabled
 
-  entity Requests      as projection on db.Request
+  entity Requests      as projection on db.PurchaseRequest
     actions {
       @restrict: [{
         grant: 'WRITE',
@@ -57,9 +57,8 @@ service ApprovalService {
       'Admin'
     ]
   }]
-
-entity ApprovalSteps as select from db.ApprovalStep
-    order by runNumber asc, stepNumber asc;
+  entity ApprovalSteps as projection on db.ApprovalStep
+    order by stepNumber asc;
   @restrict: [{
     grant: 'READ',
     to   : [

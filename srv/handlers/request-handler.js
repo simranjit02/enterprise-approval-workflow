@@ -2,9 +2,8 @@ console.log("FILE LOADED");
 const cds = require("@sap/cds");
 
 module.exports = (srv) => {
-  const { Request, ApprovalStep, AuditLog, WorkflowInstance } = cds.entities(
-    "com.enterprise.approval",
-  );
+  const { PurchaseRequest, ApprovalStep, AuditLog, WorkflowInstance } =
+    cds.entities("com.enterprise.approval");
 
   // srv.before("CREATE", "Requests", async (req) => {
   //   console.log("CREATE event:", req.data);
@@ -13,7 +12,7 @@ module.exports = (srv) => {
   srv.on("submit", "Requests", async (req) => {
     const { ID } = req.params[0];
 
-    const request = await SELECT.one.from(Request).where({ ID });
+    const request = await SELECT.one.from(PurchaseRequest).where({ ID });
     if (!request) return req.error(404, `Request ${ID} not found`);
     if (request.status !== "DRAFT" && request.status !== "REJECTED") {
       return req.error(
@@ -32,10 +31,10 @@ module.exports = (srv) => {
       );
     }
 
-    await UPDATE(Request).set({ status: "SUBMITTED" }).where({ ID });
+    await UPDATE(PurchaseRequest).set({ status: "SUBMITTED" }).where({ ID });
 
     const steps = [];
-    if (request.amount <= 5000) {
+    if (request.totalAmount <= 5000) {
       steps.push({
         request_ID: ID,
         stepNumber: 1,
@@ -51,7 +50,6 @@ module.exports = (srv) => {
         approverRole: "Manager",
         approverUserId: "manager@company.com",
         stepStatus: "ACTIVE",
-        runNumber: runNumber,
         decision: "PENDING",
       });
       steps.push({
@@ -60,7 +58,6 @@ module.exports = (srv) => {
         approverRole: "Finance",
         approverUserId: "finance@company.com",
         stepStatus: "ACTIVE",
-        runNumber: runNumber,
         decision: "PENDING",
       });
     }
@@ -79,11 +76,11 @@ module.exports = (srv) => {
       status: "RUNNING",
       startedAt: new Date(),
     });
-    await UPDATE(Request).set({ status: "IN_APPROVAL" }).where({ ID });
+    await UPDATE(PurchaseRequest).set({ status: "IN_APPROVAL" }).where({ ID });
 
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
-      entityName: "Request",
+      entityName: "PurchaseRequest",
       entityId: ID,
       action: runNumber === 1 ? "SUBMITTED" : "RESUBMITTED",
       oldValue: request.status,
@@ -91,7 +88,7 @@ module.exports = (srv) => {
       performedBy: req.user?.id || "anonymous",
     });
 
-    const updated = await SELECT.one.from(Request).where({ ID });
+    const updated = await SELECT.one.from(PurchaseRequest).where({ ID });
 
     return updated;
   });
