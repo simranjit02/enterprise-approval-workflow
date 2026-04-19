@@ -37,7 +37,7 @@ module.exports = (srv) => {
     }
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
-      entityName: "Request",
+      entityName: "PurchaseRequest",
       entityId: ID,
       action: "APPROVE",
       oldValue: request.status,
@@ -76,7 +76,7 @@ module.exports = (srv) => {
     await UPDATE(PurchaseRequest).set({ status: "REJECTED" }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
-      entityName: "Request",
+      entityName: "PurchaseRequest",
       entityId: ID,
       action: "REJECT",
       oldValue: request.status,
