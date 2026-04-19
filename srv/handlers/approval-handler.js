@@ -2,13 +2,13 @@ const cds = require("@sap/cds");
 const { SELECT } = require("@sap/cds/lib/ql/cds-ql");
 
 module.exports = (srv) => {
-  const { Request, ApprovalStep, AuditLog } = cds.entities(
+  const { PurchaseRequest, ApprovalStep, AuditLog } = cds.entities(
     "com.enterprise.approval",
   );
 
   srv.on("approve", "Requests", async (req) => {
     const { ID } = req.params[0];
-    const request = await SELECT.one.from(Request).where({ ID });
+    const request = await SELECT.one.from(PurchaseRequest).where({ ID });
     if (request.status !== "IN_APPROVAL") {
       return req.error(400, "Request is not available for approval");
     }
@@ -33,7 +33,7 @@ module.exports = (srv) => {
       decision: "PENDING",
     });
     if (!pendingSteps.length) {
-      await UPDATE(Request).set({ status: "APPROVED" }).where({ ID });
+      await UPDATE(PurchaseRequest).set({ status: "APPROVED" }).where({ ID });
     }
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
@@ -44,12 +44,12 @@ module.exports = (srv) => {
       newValue: "APPROVED",
       performedBy: req.user.id,
     });
-    return await SELECT.one.from(Request).where({ ID });
+    return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 
   srv.on("reject", "Requests", async (req) => {
     const { ID } = req.params[0];
-    const request = await SELECT.one.from(Request).where({ ID });
+    const request = await SELECT.one.from(PurchaseRequest).where({ ID });
     if (request.status !== "IN_APPROVAL") {
       return req.error(400, "Request is not available for approval");
     }
@@ -73,7 +73,7 @@ module.exports = (srv) => {
     await UPDATE(ApprovalStep)
       .set({ stepStatus: "SKIPPED", decision: "PENDING" })
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
-    await UPDATE(Request).set({ status: "REJECTED" }).where({ ID });
+    await UPDATE(PurchaseRequest).set({ status: "REJECTED" }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "Request",
@@ -83,6 +83,6 @@ module.exports = (srv) => {
       newValue: "REJECTED",
       performedBy: req.user.id,
     });
-    return await SELECT.one.from(Request).where({ ID });
+    return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 };

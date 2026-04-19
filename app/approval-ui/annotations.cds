@@ -11,13 +11,8 @@ annotate service.Requests with @(
             },
             {
                 $Type: 'UI.DataField',
-                Label: 'Description',
-                Value: description,
-            },
-            {
-                $Type: 'UI.DataField',
-                Label: 'Amount',
-                Value: amount,
+                Label: 'Total Amount',
+                Value: totalAmount,
             },
             {
                 $Type: 'UI.DataField',
@@ -61,7 +56,6 @@ annotate service.Requests with @(
         }
     ],
     UI.LineItem                  : [
-
         {
             $Type: 'UI.DataField',
             Label: 'Title',
@@ -69,8 +63,8 @@ annotate service.Requests with @(
         },
         {
             $Type: 'UI.DataField',
-            Label: 'Amount',
-            Value: amount,
+            Label: 'Total Amount',
+            Value: totalAmount,
         },
         {
             $Type: 'UI.DataField',
@@ -81,19 +75,14 @@ annotate service.Requests with @(
             $Type: 'UI.DataField',
             Label: 'Status',
             Value: status,
-
         },
     ],
     UI.HeaderInfo                : {
-        TypeName      : 'Request',
-        TypeNamePlural: 'Requests',
+        TypeName      : 'Purchase Request',
+        TypeNamePlural: 'Purchase Requests',
         Title         : {
             $Type: 'UI.DataField',
             Value: title,
-        },
-        Description   : {
-            $Type: 'UI.DataField',
-            Value: description,
         },
         TypeImageUrl  : 'sap-icon://request',
     },
@@ -109,7 +98,6 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
-
                 {$And: [
                     {$Ne: [
                         {$Path: 'status'},
@@ -140,12 +128,6 @@ annotate service.Requests with @(
 );
 
 annotate service.ApprovalSteps with @(UI.LineItem: [
-    {
-        $Type         : 'UI.DataField',
-        Value         : runNumber,
-        Label         : 'Attempt',
-        @UI.Importance: #High,
-    },
     {
         $Type         : 'UI.DataField',
         Label         : 'Step',
@@ -205,21 +187,9 @@ annotate service.ApprovalSteps with @(UI.LineItem: [
     },
 ], );
 
-annotate service.ApprovalSteps with @(UI.PresentationVariant: {SortOrder: [
-    {
-        Property  : runNumber,
-        Descending: false
-    },
-    {
-        Property  : stepNumber,
-        Descending: false
-    },
-], }, );
-
 annotate service.Requests with {
     title       @Common.FieldControl: #Mandatory;
-    description @Common.FieldControl: #Mandatory;
-    amount      @(
+    totalAmount @(
         Common.FieldControl : #Mandatory,
         Measures.ISOCurrency: currency,
     );
