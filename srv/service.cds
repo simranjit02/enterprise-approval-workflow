@@ -49,6 +49,28 @@ service ApprovalService {
       action reject(comment: String) returns Requests;
     };
 
+  @restrict: [
+    {
+      grant: [
+        'CREATE',
+        'READ',
+        'WRITE'
+      ],
+      to   : 'Requester'
+    },
+    {
+      grant: ['READ'],
+      to   : [
+        'Manager',
+        'Finance',
+        'Admin'
+      ]
+    }
+  ]
+  entity RequestItems  as projection on db.RequestItem
+                          order by
+                            itemNumber asc;
+
   @restrict: [{
     grant: 'READ',
     to   : [
@@ -58,7 +80,9 @@ service ApprovalService {
     ]
   }]
   entity ApprovalSteps as projection on db.ApprovalStep
-    order by stepNumber asc;
+                          order by
+                            stepNumber asc;
+
   @restrict: [{
     grant: 'READ',
     to   : [
