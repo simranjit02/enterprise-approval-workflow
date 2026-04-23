@@ -294,23 +294,24 @@ annotate service.Requests with {
 // ─── Value Helps ─────────────────────────────────────────────────────────────
 
 annotate service.Requests with {
-    vendorId    @(
-        Common.ValueList: {
-            CollectionPath: 'VendorHelp',
-            Parameters    : [
-                {
-                    $Type            : 'Common.ValueListParameterOut',
-                    LocalDataProperty: vendorId,
-                    ValueListProperty: 'vendorId',
-                },
-                {
-                    $Type            : 'Common.ValueListParameterDisplayOnly',
-                    ValueListProperty: 'vendorName',
-                },
-            ],
-        },
-        Common.ValueListWithFixedValues: false,
-    );
+    vendorId @(
+    Common.ValueList: {
+        CollectionPath: 'VendorHelp',
+        Parameters    : [
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorId,
+                ValueListProperty: 'vendorId',
+            },
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorName,
+                ValueListProperty: 'vendorName',
+            },
+        ],
+    },
+    Common.ValueListWithFixedValues: false,
+);
     costCenter  @(
         Common.ValueList: {
             CollectionPath: 'CostCenterHelp',
