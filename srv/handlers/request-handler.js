@@ -194,4 +194,32 @@ module.exports = async (srv) => {
 
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
+  // ─── lineTotal auto-calculation ────────────────────────────────────────────
+srv.after(["CREATE", "UPDATE"], "RequestItems", async (data, req) => {
+  const item = Array.isArray(data) ? data[0] : data;
+  if (!item?.ID) return;
+
+  const current = await SELECT.one
+    .from("com.enterprise.approval.RequestItem")
+    .where({ ID: item.ID });
+  if (!current) return;
+
+  const qty = current.quantity || 0;
+  const price = current.unitPrice || 0;
+  const lineTotal = qty * price;
+
+  await UPDATE("com.enterprise.approval.RequestItem")
+    .set({ lineTotal })
+    .where({ ID: item.ID });
+
+  // Recalculate totalAmount on parent PurchaseRequest
+  const allItems = await SELECT.from("com.enterprise.approval.RequestItem").where({
+    request_ID: current.request_ID,
+  });
+  const totalAmount = allItems.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
+
+  await UPDATE(PurchaseRequest)
+    .set({ totalAmount })
+    .where({ ID: current.request_ID });
+});
 };

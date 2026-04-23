@@ -345,7 +345,8 @@ annotate service.RequestItems with {
                     ValueListProperty: 'productId',
                 },
                 {
-                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: unit,
                     ValueListProperty: 'baseUnit',
                 },
             ],
@@ -353,4 +354,3 @@ annotate service.RequestItems with {
         Common.ValueListWithFixedValues: false,
     );
 };
-
