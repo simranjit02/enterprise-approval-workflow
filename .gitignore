@@ -38,3 +38,6 @@ resources/
 
 # zip
 *.zip
+
+#env
+.env

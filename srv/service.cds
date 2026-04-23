@@ -47,7 +47,18 @@ service ApprovalService {
         ]
       }]
       action reject(comment: String) returns Requests;
+      @restrict: [{
+        grant: 'WRITE',
+        to   : 'Requester'
+      }]
+      action validateVendor()        returns Requests;
+      @restrict: [{
+        grant: 'WRITE',
+        to   : 'Requester'
+      }]
+      action validateCostCenter()    returns Requests;
     };
+
 
   @restrict: [
     {
@@ -69,7 +80,14 @@ service ApprovalService {
   ]
   entity RequestItems  as projection on db.RequestItem
                           order by
-                            itemNumber asc;
+                            itemNumber asc
+    actions {
+      @restrict: [{
+        grant: 'WRITE',
+        to   : 'Requester'
+      }]
+      action validateProduct() returns RequestItems;
+    };
 
   @restrict: [{
     grant: 'READ',
