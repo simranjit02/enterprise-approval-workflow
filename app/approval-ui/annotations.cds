@@ -47,11 +47,6 @@ annotate service.Requests with @(
         },
         {
             $Type: 'UI.DataField',
-            Label: 'Department',
-            Value: department,
-        },
-        {
-            $Type: 'UI.DataField',
             Label: 'Amount',
             Value: totalAmount,
         },
@@ -192,8 +187,12 @@ annotate service.Requests with @(
     UI.FieldGroup #BusinessDetails: {
         $Type: 'UI.FieldGroupType',
         Data : [
-            {$Type: 'UI.DataField', Label: 'Department',  Value: department},
             {$Type: 'UI.DataField', Label: 'Cost Center', Value: costCenter},
+            {
+                $Type : 'UI.DataField',
+                Value : costCenterName,
+                Label : 'Cost Center Name',
+            },
         ],
     },
 
@@ -225,7 +224,6 @@ annotate service.Requests with {
     title                 @Common.FieldControl: #Mandatory;
     category              @Common.FieldControl: #Mandatory;
     priority              @Common.FieldControl: #Mandatory;
-    department            @Common.FieldControl: #Mandatory;
     justification         @Common.FieldControl: #Mandatory;
     currency              @Common.FieldControl: #ReadOnly;
     requestNumber         @Common.FieldControl: #ReadOnly;
@@ -313,26 +311,27 @@ annotate service.Requests with {
     Common.ValueListWithFixedValues: false,
 );
     costCenter  @(
-        Common.ValueList: {
-            CollectionPath: 'CostCenterHelp',
-            Parameters    : [
-                {
-                    $Type            : 'Common.ValueListParameterOut',
-                    LocalDataProperty: costCenter,
-                    ValueListProperty: 'costCenterId',
-                },
-                {
-                    $Type            : 'Common.ValueListParameterDisplayOnly',
-                    ValueListProperty: 'costCenterName',
-                },
-                {
-                    $Type            : 'Common.ValueListParameterDisplayOnly',
-                    ValueListProperty: 'CompanyCode',
-                },
-            ],
-        },
-        Common.ValueListWithFixedValues: false,
-    );
+    Common.ValueList: {
+        CollectionPath: 'CostCenterHelp',
+        Parameters    : [
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: costCenter,
+                ValueListProperty: 'costCenterId',
+            },
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: costCenterName,
+                ValueListProperty: 'costCenterName',
+            },
+            {
+                $Type            : 'Common.ValueListParameterDisplayOnly',
+                ValueListProperty: 'CompanyCode',
+            },
+        ],
+    },
+    Common.ValueListWithFixedValues: false,
+);
 };
 
 annotate service.RequestItems with {

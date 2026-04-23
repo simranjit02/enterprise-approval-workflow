@@ -61,7 +61,7 @@ module.exports = async (srv) => {
     const result = await COSTCENTER.run(
       SELECT.one
         .from("API_COSTCENTER_SRV.A_CostCenter_2")
-.where({ CostCenter: request.costCenter, ControllingArea: 'A000' })
+        .where({ CostCenter: request.costCenter, ControllingArea: 'A000' })
         .columns("CostCenter", "CostCenterName", "CompanyCode")
     );
 
@@ -170,8 +170,18 @@ module.exports = async (srv) => {
       startedAt: new Date(),
     });
 
-    await UPDATE(PurchaseRequest).set({ status: "IN_APPROVAL" }).where({ ID });
+    // Generate request number: PR-YYYY-NNN format
+    const year = new Date().getFullYear();
+    const count = await SELECT.from(PurchaseRequest)
+      .where({ requestNumber: { '!=': null } });
+    const seq = String(count.length + 1).padStart(3, '0');
+    const requestNumber = `PR-${year}-${seq}`;
 
+    await UPDATE(PurchaseRequest).set({
+      status: "IN_APPROVAL",
+      requestNumber: requestNumber,
+      submittedAt: new Date()
+    }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "PurchaseRequest",

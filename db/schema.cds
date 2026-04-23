@@ -7,13 +7,13 @@ using {
 
 // ─── Existing Types (extended) ────────────────────────────────────────────────
 
-type Decision : String enum {
+type Decision          : String enum {
     PENDING;
     APPROVED;
     REJECTED;
 }
 
-type Status : String enum {
+type Status            : String enum {
     DRAFT;
     SUBMITTED;
     IN_APPROVAL;
@@ -25,13 +25,13 @@ type Status : String enum {
     CANCELLED;
 }
 
-type ExecutionStatus : String enum {
+type ExecutionStatus   : String enum {
     PENDING;
     SUCCESS;
     FAILED;
 }
 
-type WorkflowStatus : String enum {
+type WorkflowStatus    : String enum {
     STARTED;
     RUNNING;
     COMPLETED;
@@ -39,7 +39,7 @@ type WorkflowStatus : String enum {
     FAILED;
 }
 
-type StepStatus : String enum {
+type StepStatus        : String enum {
     PENDING;
     ACTIVE;
     COMPLETED;
@@ -48,14 +48,14 @@ type StepStatus : String enum {
 
 // ─── New Types ────────────────────────────────────────────────────────────────
 
-type Priority : String enum {
+type Priority          : String enum {
     LOW;
     MEDIUM;
     HIGH;
     CRITICAL;
 }
 
-type RequestCategory : String enum {
+type RequestCategory   : String enum {
     IT;
     SOFTWARE;
     SERVICES;
@@ -70,7 +70,7 @@ type BudgetCheckStatus : String enum {
     EXCEEDED;
 }
 
-type AIRiskLevel : String enum {
+type AIRiskLevel       : String enum {
     LOW;
     MEDIUM;
     HIGH;
@@ -95,7 +95,8 @@ entity PurchaseRequest : cuid, managed {
     category              : RequestCategory;
     department            : String(100);
     costCenter            : String(20);
-    justification         : String(1000);
+    costCenterName        : String(50);
+    justification : String(1000);
     requestedDeliveryDate : Date;
 
     // Amount & Budget
@@ -140,7 +141,7 @@ entity RequestItem : cuid, managed {
 entity DepartmentBudget : cuid, managed {
     // Unique constraint: department + fiscalYear + fiscalMonth
     // Enforced in handler on CREATE — CDS has no native compound unique annotation
-    department        : String(100) not null;
+    costCenter        : String(20) not null;
     fiscalYear        : Integer not null;
     fiscalMonth       : Integer not null; // 1–12
     totalAnnualBudget : Decimal(15, 2) not null;
