@@ -67,7 +67,7 @@
         "credentials": {
           "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER",
           "headers": {
-            "APIKey": "${API_KEY}"
+            "APIKey": "9mlUkwm4KC6eX8HQ5bi7ke7pXUmXZaDK"
           }
         },
         "[production]": {
@@ -85,7 +85,7 @@
         "credentials": {
           "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_PRODUCT_SRV",
           "headers": {
-            "APIKey": "${API_KEY}"
+            "APIKey": "9mlUkwm4KC6eX8HQ5bi7ke7pXUmXZaDK"
           }
         },
         "[production]": {
@@ -103,7 +103,7 @@
         "credentials": {
           "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata4/sap/api_cost_center/srvd_a2x/sap/costcenter/0001",
           "headers": {
-            "APIKey": "${API_KEY}"
+            "APIKey": "9mlUkwm4KC6eX8HQ5bi7ke7pXUmXZaDK"
           }
         },
         "[production]": {

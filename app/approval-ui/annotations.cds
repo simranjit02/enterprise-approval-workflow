@@ -291,3 +291,66 @@ annotate service.Requests with {
     totalAmount @Common.FieldControl : #ReadOnly
 };
 
+// ─── Value Helps ─────────────────────────────────────────────────────────────
+
+annotate service.Requests with {
+    vendorId    @(
+        Common.ValueList: {
+            CollectionPath: 'VendorHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: vendorId,
+                    ValueListProperty: 'vendorId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'vendorName',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+    costCenter  @(
+        Common.ValueList: {
+            CollectionPath: 'CostCenterHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: costCenter,
+                    ValueListProperty: 'costCenterId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'costCenterName',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'CompanyCode',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+};
+
+annotate service.RequestItems with {
+    productId   @(
+        Common.ValueList: {
+            CollectionPath: 'ProductHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: productId,
+                    ValueListProperty: 'productId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'baseUnit',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+};
+
