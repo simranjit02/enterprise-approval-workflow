@@ -47,11 +47,6 @@ annotate service.Requests with @(
         },
         {
             $Type: 'UI.DataField',
-            Label: 'Department',
-            Value: department,
-        },
-        {
-            $Type: 'UI.DataField',
             Label: 'Amount',
             Value: totalAmount,
         },
@@ -192,8 +187,12 @@ annotate service.Requests with @(
     UI.FieldGroup #BusinessDetails: {
         $Type: 'UI.FieldGroupType',
         Data : [
-            {$Type: 'UI.DataField', Label: 'Department',  Value: department},
             {$Type: 'UI.DataField', Label: 'Cost Center', Value: costCenter},
+            {
+                $Type : 'UI.DataField',
+                Value : costCenterName,
+                Label : 'Cost Center Name',
+            },
         ],
     },
 
@@ -225,7 +224,6 @@ annotate service.Requests with {
     title                 @Common.FieldControl: #Mandatory;
     category              @Common.FieldControl: #Mandatory;
     priority              @Common.FieldControl: #Mandatory;
-    department            @Common.FieldControl: #Mandatory;
     justification         @Common.FieldControl: #Mandatory;
     currency              @Common.FieldControl: #ReadOnly;
     requestNumber         @Common.FieldControl: #ReadOnly;
@@ -291,3 +289,116 @@ annotate service.Requests with {
     totalAmount @Common.FieldControl : #ReadOnly
 };
 
+// ─── Value Helps ─────────────────────────────────────────────────────────────
+
+annotate service.Requests with {
+    vendorId @(
+    Common.ValueList: {
+        CollectionPath: 'VendorHelp',
+        Parameters    : [
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorId,
+                ValueListProperty: 'vendorId',
+            },
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorName,
+                ValueListProperty: 'vendorName',
+            },
+        ],
+    },
+    Common.ValueListWithFixedValues: false,
+);
+    costCenter  @(
+    Common.ValueList: {
+        CollectionPath: 'CostCenterHelp',
+        Parameters    : [
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: costCenter,
+                ValueListProperty: 'costCenterId',
+            },
+            {
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: costCenterName,
+                ValueListProperty: 'costCenterName',
+            },
+            {
+                $Type            : 'Common.ValueListParameterDisplayOnly',
+                ValueListProperty: 'CompanyCode',
+            },
+        ],
+    },
+    Common.ValueListWithFixedValues: false,
+);
+};
+
+annotate service.RequestItems with {
+    productId   @(
+        Common.ValueList: {
+            CollectionPath: 'ProductHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: productId,
+                    ValueListProperty: 'productId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: unit,
+                    ValueListProperty: 'baseUnit',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+};
+// ─── Dropdowns: Priority, Category, Country, Industry ────────────────────────
+
+annotate service.Requests with {
+    priority @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'PriorityValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: priority,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    category @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'CategoryValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: category,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    vendorCountry @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'CountryValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorCountry,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    vendorIndustry @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'IndustryValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorIndustry,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+};
