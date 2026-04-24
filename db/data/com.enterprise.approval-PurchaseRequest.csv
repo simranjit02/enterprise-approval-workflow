@@ -1,0 +1,2 @@
+ID,requestNumber,title,status,priority,category,department,costCenter,justification,vendorId,vendorName,vendorCountry,vendorIndustry,totalAmount,budgetCheckStatus,currency,createdBy,createdAt,modifiedBy,modifiedAt
+b1000000-0000-0000-0000-000000000001,PR-2026-001,Test Laptop Purchase,DRAFT,HIGH,IT,Engineering,10101101,Need laptops for new hires,1000030,SAP SE,DEU,Technology,0.00,UNCHECKED,EUR,alice,2026-04-23T00:00:00Z,alice,2026-04-23T00:00:00Z

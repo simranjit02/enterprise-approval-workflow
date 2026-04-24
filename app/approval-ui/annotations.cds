@@ -354,3 +354,51 @@ annotate service.RequestItems with {
         Common.ValueListWithFixedValues: false,
     );
 };
+// ─── Dropdowns: Priority, Category, Country, Industry ────────────────────────
+
+annotate service.Requests with {
+    priority @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'PriorityValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: priority,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    category @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'CategoryValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: category,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    vendorCountry @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'CountryValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorCountry,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    vendorIndustry @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList: {
+            CollectionPath: 'IndustryValues',
+            Parameters: [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorIndustry,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+};

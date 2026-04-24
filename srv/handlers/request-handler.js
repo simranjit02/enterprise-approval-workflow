@@ -194,32 +194,38 @@ module.exports = async (srv) => {
 
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
-  // ─── lineTotal auto-calculation ────────────────────────────────────────────
-srv.after(["CREATE", "UPDATE"], "RequestItems", async (data, req) => {
-  const item = Array.isArray(data) ? data[0] : data;
-  if (!item?.ID) return;
+// ─── lineTotal + totalAmount on draft activation ────────────────────────────
+srv.after("PATCH", "Requests", async (data, req) => {
+  console.log("data123",data);
+  
+  const requestId = data?.ID;
+  if (!requestId) return;
 
-  const current = await SELECT.one
-    .from("com.enterprise.approval.RequestItem")
-    .where({ ID: item.ID });
-  if (!current) return;
+  // Fetch all activated items for this request
+  const items = await SELECT.from("com.enterprise.approval.RequestItem")
+    .where({ request_ID: requestId });
 
-  const qty = current.quantity || 0;
-  const price = current.unitPrice || 0;
-  const lineTotal = qty * price;
+  if (!items.length) return;
 
-  await UPDATE("com.enterprise.approval.RequestItem")
-    .set({ lineTotal })
-    .where({ ID: item.ID });
+  let totalAmount = 0;
 
-  // Recalculate totalAmount on parent PurchaseRequest
-  const allItems = await SELECT.from("com.enterprise.approval.RequestItem").where({
-    request_ID: current.request_ID,
-  });
-  const totalAmount = allItems.reduce((sum, i) => sum + (i.lineTotal || 0), 0);
+  for (const item of items) {
+    const qty   = item.quantity  || 0;
+    const price = item.unitPrice || 0;
+    const lineTotal = qty * price;
+    totalAmount += lineTotal;
 
-  await UPDATE(PurchaseRequest)
+    console.log(`Item ${item.ID}: qty=${qty} price=${price} lineTotal=${lineTotal}`);
+
+    await UPDATE("com.enterprise.approval.RequestItem")
+      .set({ lineTotal })
+      .where({ ID: item.ID });
+  }
+
+  console.log(`totalAmount for request ${requestId}:`, totalAmount);
+
+  await UPDATE("com.enterprise.approval.PurchaseRequest")
     .set({ totalAmount })
-    .where({ ID: current.request_ID });
+    .where({ ID: requestId });
 });
 };

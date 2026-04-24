@@ -191,3 +191,10 @@ entity Entity1
 {
     key ID : UUID;
 }
+
+// ─── Value Help Tables ────────────────────────────────────────────────────────
+
+entity PriorityValue { key code : String(20); label : String(50); }
+entity CategoryValue { key code : String(20); label : String(50); }
+entity CountryValue  { key code : String(3);  label : String(100); }
+entity IndustryValue { key code : String(50); label : String(100); }

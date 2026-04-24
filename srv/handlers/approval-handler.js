@@ -59,6 +59,10 @@ module.exports = (srv) => {
     if (!step) {
       return req.error(403, "No active step found for you");
     }
+    console.log("step.approverUserId",step.approverUserId);
+        console.log("req.user.id",req.user.id);
+
+    d
     if (step.approverUserId !== req.user.id) {
       return req.error(403, "You are not the assigned approver for this step");
     }
