@@ -18,14 +18,17 @@ module.exports = (srv) => {
     if (!step) {
       return req.error(403, "No active step found for you");
     }
-    if (step.approverUserId !== req.user.id) {
-      return req.error(403, "You are not the assigned approver for this step");
+    if (!req.user.is(step.approverRole)) {
+      return req.error(403, `Only a ${step.approverRole} can approve this step`);
     }
+
+    // And record who acted:
     await UPDATE(ApprovalStep)
       .set({
         stepStatus: "COMPLETED",
         decision: "APPROVED",
         decidedAt: new Date(),
+        approverUserId: req.user.id,  // capture real identity at action time
       })
       .where({ ID: step.ID });
     const pendingSteps = await SELECT.from(ApprovalStep).where({
@@ -59,19 +62,18 @@ module.exports = (srv) => {
     if (!step) {
       return req.error(403, "No active step found for you");
     }
-    console.log("step.approverUserId",step.approverUserId);
-        console.log("req.user.id",req.user.id);
-
-    d
-    if (step.approverUserId !== req.user.id) {
-      return req.error(403, "You are not the assigned approver for this step");
+    if (!req.user.is(step.approverRole)) {
+      return req.error(403, `Only a ${step.approverRole} can reject this step`);
     }
+
+    // And record who acted:
     await UPDATE(ApprovalStep)
       .set({
         stepStatus: "COMPLETED",
         decision: "REJECTED",
         comment: req.data.comment || "No reason provided",
         decidedAt: new Date(),
+        approverUserId: req.user.id,  // capture real identity at action time
       })
       .where({ ID: step.ID });
     await UPDATE(ApprovalStep)
