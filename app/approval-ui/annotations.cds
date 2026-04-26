@@ -251,7 +251,13 @@ annotate service.Requests with actions {
         TargetEntities  : [in.steps],
     });
 };
-
+annotate service.RequestItems with @(
+    Common.SideEffects #RecalcOnChange: {
+        SourceProperties: ['quantity', 'unitPrice'],
+        TargetProperties: ['lineTotal'],
+        TargetEntities  : [request],
+    }
+);
 // ─── RequestItems: Child Table ────────────────────────────────────────────────
 
 annotate service.RequestItems with @(UI.LineItem: [

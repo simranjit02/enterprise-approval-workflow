@@ -1,8 +1,9 @@
 console.log("FILE LOADED");
 const cds = require("@sap/cds");
+const { SELECT } = require("@sap/cds/lib/ql/cds-ql");
 
 module.exports = async (srv) => {
-  const { PurchaseRequest, ApprovalStep, AuditLog, WorkflowInstance } =
+  const { PurchaseRequest, ApprovalStep, AuditLog, WorkflowInstance, RequestItem } =
     cds.entities("com.enterprise.approval");
 
   // ─── External Service Connections ─────────────────────────────────────────
@@ -75,11 +76,26 @@ module.exports = async (srv) => {
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 
+srv.before("NEW", "RequestItems.drafts", async (req) => {
+  const { request_ID } = req.data;
+  if (!request_ID) return;
+
+  const { RequestItems } = srv.entities;
+  
+  const existing = await SELECT.from(RequestItems.drafts)
+    .where({ request_ID });
+
+  console.log("existing draft items:", existing);
+
+  req.data.itemNumber = existing.length + 1;
+
+  console.log("assigned itemNumber:", req.data.itemNumber);
+});
   // ─── validateProduct ───────────────────────────────────────────────────────
   srv.on("validateProduct", "RequestItems", async (req) => {
     const { ID } = req.params[0];
     const item = await SELECT.one
-      .from("com.enterprise.approval.RequestItem")
+      .from(RequestItem)
       .where({ ID });
     if (!item) return req.error(404, `Item ${ID} not found`);
     if (!item.productId)
@@ -95,12 +111,12 @@ module.exports = async (srv) => {
     if (!result)
       return req.error(404, `Product '${item.productId}' not found`);
 
-    await UPDATE("com.enterprise.approval.RequestItem")
+    await UPDATE(RequestItem)
       .set({ unit: result.BaseUnit })
       .where({ ID });
 
     return await SELECT.one
-      .from("com.enterprise.approval.RequestItem")
+      .from(RequestItem)
       .where({ ID });
   });
 
@@ -195,36 +211,27 @@ module.exports = async (srv) => {
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 // ─── lineTotal + totalAmount on draft activation ────────────────────────────
-srv.after("PATCH", "Requests", async (data, req) => {
-  console.log("data123",data);
-  
+srv.after(["CREATE", "UPDATE"], "Requests", async (data, req) => {
   const requestId = data?.ID;
   if (!requestId) return;
 
-  // Fetch all activated items for this request
-  const items = await SELECT.from("com.enterprise.approval.RequestItem")
-    .where({ request_ID: requestId });
-
-  if (!items.length) return;
+  const items = data.items;
+  if (!items || !items.length) return;
 
   let totalAmount = 0;
 
   for (const item of items) {
-    const qty   = item.quantity  || 0;
-    const price = item.unitPrice || 0;
+    const qty      = parseFloat(item.quantity)  || 0;
+    const price    = parseFloat(item.unitPrice) || 0;
     const lineTotal = qty * price;
     totalAmount += lineTotal;
 
-    console.log(`Item ${item.ID}: qty=${qty} price=${price} lineTotal=${lineTotal}`);
-
-    await UPDATE("com.enterprise.approval.RequestItem")
+    await UPDATE(RequestItem)
       .set({ lineTotal })
       .where({ ID: item.ID });
   }
 
-  console.log(`totalAmount for request ${requestId}:`, totalAmount);
-
-  await UPDATE("com.enterprise.approval.PurchaseRequest")
+  await UPDATE(PurchaseRequest)
     .set({ totalAmount })
     .where({ ID: requestId });
 });
