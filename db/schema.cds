@@ -174,10 +174,6 @@ type WorkflowStatus    : String enum {
     FAILED;
 }
 
-entity Entity1 {
-    key ID : UUID;
-}
-
 // ─── Value Help Tables ────────────────────────────────────────────────────────
 
 entity PriorityValue {
