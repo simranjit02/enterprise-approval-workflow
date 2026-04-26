@@ -1,67 +1,29 @@
 using ApprovalService as service from '../../srv/service';
 
-annotate service.Requests with @(
-    UI.FieldGroup #GeneratedGroup: {
-        $Type: 'UI.FieldGroupType',
-        Data : [
-            {
-                $Type: 'UI.DataField',
-                Label: 'Title',
-                Value: title,
-            },
-            {
-                $Type: 'UI.DataField',
-                Label: 'Description',
-                Value: description,
-            },
-            {
-                $Type: 'UI.DataField',
-                Label: 'Amount',
-                Value: amount,
-            },
-            {
-                $Type: 'UI.DataField',
-                Label: 'Currency',
-                Value: currency,
-            },
-            {
-                $Type      : 'UI.DataField',
-                Label      : 'Status',
-                Value      : status,
-                Criticality: {$edmJson: {$If: [
-                    {$Eq: [
-                        {$Path: 'status'},
-                        'APPROVED'
-                    ]},
-                    3,
-                    {$If: [
-                        {$Eq: [
-                            {$Path: 'status'},
-                            'REJECTED'
-                        ]},
-                        1,
-                        2
-                    ]}
-                ]}},
-            },
-        ],
-    },
-    UI.Facets                    : [
-        {
-            $Type : 'UI.ReferenceFacet',
-            ID    : 'GeneratedFacet1',
-            Label : 'General Information',
-            Target: '@UI.FieldGroup#GeneratedGroup',
-        },
-        {
-            $Type : 'UI.ReferenceFacet',
-            ID    : 'ApprovalStepsFacet',
-            Label : 'Approval Steps',
-            Target: 'steps/@UI.LineItem',
-        }
-    ],
-    UI.LineItem                  : [
+// ─── Requests: Header + List + Actions ───────────────────────────────────────
 
+annotate service.Requests with @(
+
+    UI.HeaderInfo                 : {
+        TypeName      : 'Purchase Request',
+        TypeNamePlural: 'Purchase Requests',
+        Title         : {
+            $Type: 'UI.DataField',
+            Value: title,
+        },
+        Description   : {
+            $Type: 'UI.DataField',
+            Value: requestNumber,
+        },
+        TypeImageUrl  : 'sap-icon://sales-order',
+    },
+
+    UI.LineItem                   : [
+        {
+            $Type: 'UI.DataField',
+            Label: 'Request No.',
+            Value: requestNumber,
+        },
         {
             $Type: 'UI.DataField',
             Label: 'Title',
@@ -69,58 +31,97 @@ annotate service.Requests with @(
         },
         {
             $Type: 'UI.DataField',
+            Label: 'Vendor',
+            Value: vendorName,
+        },
+        {
+            $Type      : 'UI.DataField',
+            Label      : 'Priority',
+            Value      : priority,
+            Criticality: {$edmJson: {$If: [
+                {$Eq: [
+                    {$Path: 'priority'},
+                    'CRITICAL'
+                ]},
+                1,
+                {$If: [
+                    {$Eq: [
+                        {$Path: 'priority'},
+                        'HIGH'
+                    ]},
+                    2,
+                    2
+                ]}
+            ]}},
+        },
+        {
+            $Type: 'UI.DataField',
             Label: 'Amount',
-            Value: amount,
+            Value: totalAmount,
         },
         {
-            $Type: 'UI.DataField',
-            Label: 'Currency',
-            Value: currency,
+            $Type      : 'UI.DataField',
+            Label      : 'Status',
+            Value      : status,
+            Criticality: {$edmJson: {$If: [
+                {$Eq: [
+                    {$Path: 'status'},
+                    'APPROVED'
+                ]},
+                3,
+                {$If: [
+                    {$Eq: [
+                        {$Path: 'status'},
+                        'IN_APPROVAL'
+                    ]},
+                    2,
+                    {$If: [
+                        {$Eq: [
+                            {$Path: 'status'},
+                            'BUDGET_ESCALATION'
+                        ]},
+                        2,
+                        {$If: [
+                            {$Eq: [
+                                {$Path: 'status'},
+                                'DRAFT'
+                            ]},
+                            0,
+                            1
+                        ]}
+                    ]}
+                ]}
+            ]}},
         },
         {
-            $Type: 'UI.DataField',
-            Label: 'Status',
-            Value: status,
-
+            $Type      : 'UI.DataField',
+            Label      : 'AI Risk',
+            Value      : aiRiskLevel,
+            Criticality: {$edmJson: {$If: [
+                {$Eq: [
+                    {$Path: 'aiRiskLevel'},
+                    'LOW'
+                ]},
+                3,
+                {$If: [
+                    {$Eq: [
+                        {$Path: 'aiRiskLevel'},
+                        'MEDIUM'
+                    ]},
+                    2,
+                    1
+                ]}
+            ]}},
         },
     ],
-    UI.HeaderInfo                : {
-        TypeName      : 'Request',
-        TypeNamePlural: 'Requests',
-        Title         : {
-            $Type: 'UI.DataField',
-            Value: title,
-        },
-        Description   : {
-            $Type: 'UI.DataField',
-            Value: description,
-        },
-        TypeImageUrl  : 'sap-icon://request',
-    },
-    UI.Identification            : [
-        {
-            $Type        : 'UI.DataFieldForAction',
-            Action       : 'ApprovalService.submit',
-            Label        : 'Submit',
-            Determining  : true,
-            Criticality  : #Positive,
-            ![@UI.Hidden]: {$edmJson: {$Or: [
-                {$Eq: [
-                    {$Path: 'IsActiveEntity'},
-                    {$Bool: false}
-                ]},
 
-                {$And: [
-                    {$Ne: [
-                        {$Path: 'status'},
-                        'DRAFT'
-                    ]},
-                    {$Ne: [
-                        {$Path: 'status'},
-                        'REJECTED'
-                    ]},
-                ]}
-            ]}}
+    UI.Identification             : [
+        {
+            $Type      : 'UI.DataFieldForAction',
+            Action     : 'ApprovalService.submit',
+            Label      : 'Submit',
+            Determining: true,
+            Criticality: #Positive,
         },
         {
             $Type      : 'UI.DataFieldForAction',
@@ -137,38 +138,322 @@ annotate service.Requests with @(
             Criticality: #Negative,
         },
     ],
+
+    UI.Facets                     : [
+        {
+            $Type : 'UI.CollectionFacet',
+            ID    : 'GeneralInfo',
+            Label : 'General Information',
+            Facets: [
+                {
+                    $Type : 'UI.ReferenceFacet',
+                    ID    : 'RequestDetails',
+                    Label : 'Request Details',
+                    Target: '@UI.FieldGroup#RequestDetails',
+                },
+                {
+                    $Type : 'UI.ReferenceFacet',
+                    ID    : 'VendorInfo',
+                    Label : 'Vendor Information',
+                    Target: '@UI.FieldGroup#VendorInfo',
+                },
+            ],
+        },
+        {
+            $Type : 'UI.CollectionFacet',
+            ID    : 'BusinessContext',
+            Label : 'Business Context',
+            Facets: [
+                {
+                    $Type : 'UI.ReferenceFacet',
+                    ID    : 'BusinessDetails',
+                    Label : 'Business Details',
+                    Target: '@UI.FieldGroup#BusinessDetails',
+                },
+                {
+                    $Type : 'UI.ReferenceFacet',
+                    ID    : 'StatusTracking',
+                    Label : 'Status & Tracking',
+                    Target: '@UI.FieldGroup#StatusTracking',
+                },
+            ],
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID    : 'ItemsFacet',
+            Label : 'Items',
+            Target: 'items/@UI.LineItem',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID    : 'BudgetRisk',
+            Label : 'Budget & Risk',
+            Target: '@UI.FieldGroup#BudgetRisk',
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID    : 'ApprovalStepsFacet',
+            Label : 'Approval Steps',
+            Target: 'steps/@UI.LineItem',
+        },
+    ],
+
+    UI.FieldGroup #RequestDetails : {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Label: 'Title',
+                Value: title
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Priority',
+                Value: priority
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Category',
+                Value: category
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Justification',
+                Value: justification
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Delivery Date',
+                Value: requestedDeliveryDate
+            },
+        ],
+    },
+
+    UI.FieldGroup #VendorInfo     : {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Label: 'Vendor ID',
+                Value: vendorId
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Vendor Name',
+                Value: vendorName
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Country',
+                Value: vendorCountry
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Industry',
+                Value: vendorIndustry
+            },
+        ],
+    },
+
+    UI.FieldGroup #BusinessDetails: {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Label: 'Cost Center',
+                Value: costCenter
+            },
+            {
+                $Type: 'UI.DataField',
+                Value: costCenterName,
+                Label: 'Cost Center Name',
+            },
+        ],
+    },
+
+    UI.FieldGroup #StatusTracking : {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Label: 'Request No.',
+                Value: requestNumber
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Status',
+                Value: status
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Submitted At',
+                Value: submittedAt
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Completed At',
+                Value: completedAt
+            },
+        ],
+    },
+
+    UI.FieldGroup #BudgetRisk     : {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Label: 'Total Amount',
+                Value: totalAmount
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Currency',
+                Value: currency
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Budget Status',
+                Value: budgetCheckStatus
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'AI Risk Level',
+                Value: aiRiskLevel
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'AI Risk Summary',
+                Value: aiRiskSummary
+            },
+        ],
+    },
 );
+
+// ─── Field Controls ───────────────────────────────────────────────────────────
+
+annotate service.Requests with {
+    title             @Common.FieldControl: #Mandatory;
+    category          @Common.FieldControl: #Mandatory;
+    priority          @Common.FieldControl: #Mandatory;
+    justification     @Common.FieldControl: #Mandatory;
+    currency          @Common.FieldControl: #ReadOnly;
+    requestNumber     @Common.FieldControl: #ReadOnly;
+    status            @Common.FieldControl: #ReadOnly;
+    budgetCheckStatus @Common.FieldControl: #ReadOnly;
+    aiRiskLevel       @Common.FieldControl: #ReadOnly;
+    aiRiskSummary     @Common.FieldControl: #ReadOnly;
+    submittedAt       @Common.FieldControl: #ReadOnly;
+    completedAt       @Common.FieldControl: #ReadOnly;
+};
+
+// ─── SideEffects ─────────────────────────────────────────────────────────────
+
+annotate service.Requests with actions {
+    submit  @(Common.SideEffects: {
+        TargetProperties: [
+            'in/status',
+            'in/submittedAt',
+            'in/budgetCheckStatus'
+        ],
+        TargetEntities  : [in.steps],
+    });
+    approve @(Common.SideEffects: {
+        TargetProperties: [
+            'in/status',
+            'in/completedAt'
+        ],
+        TargetEntities  : [in.steps],
+    });
+    reject  @(Common.SideEffects: {
+        TargetProperties: [
+            'in/status',
+            'in/completedAt'
+        ],
+        TargetEntities  : [in.steps],
+    });
+};
+
+annotate service.RequestItems with @(Common.SideEffects #RecalcOnChange: {
+    SourceProperties: [
+        'quantity',
+        'unitPrice'
+    ],
+    TargetProperties: ['lineTotal'],
+    TargetEntities  : [request],
+});
+// ─── RequestItems: Child Table ────────────────────────────────────────────────
+
+annotate service.RequestItems with @(UI.LineItem: [
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Item No.',
+        Value         : itemNumber,
+        @UI.Importance: #High
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Product ID',
+        Value         : productId,
+        @UI.Importance: #Medium
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Name',
+        Value         : productName,
+        @UI.Importance: #High
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Category',
+        Value         : productCategory,
+        @UI.Importance: #Medium
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Quantity',
+        Value         : quantity,
+        @UI.Importance: #High
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Unit',
+        Value         : unit,
+        @UI.Importance: #High
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Unit Price',
+        Value         : unitPrice,
+        @UI.Importance: #High
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Line Total',
+        Value         : lineTotal,
+        @UI.Importance: #High
+    },
+]);
+
+// ─── ApprovalSteps: Child Table ───────────────────────────────────────────────
 
 annotate service.ApprovalSteps with @(UI.LineItem: [
     {
         $Type         : 'UI.DataField',
-        Value         : runNumber,
-        Label         : 'Attempt',
-        @UI.Importance: #High,
-    },
-    {
-        $Type         : 'UI.DataField',
         Label         : 'Step',
         Value         : stepNumber,
-        @UI.Importance: #High,
+        @UI.Importance: #High
     },
     {
         $Type         : 'UI.DataField',
         Label         : 'Approver Role',
         Value         : approverRole,
-        @UI.Importance: #High,
+        @UI.Importance: #High
     },
     {
         $Type         : 'UI.DataField',
         Label         : 'Approver',
         Value         : approverUserId,
-        @UI.Importance: #High,
-    },
-    {
-        $Type         : 'UI.DataField',
-        Label         : 'Rejection Reason',
-        Value         : comment,
-        @UI.Importance: #High,
+        @UI.Importance: #High
     },
     {
         $Type         : 'UI.DataField',
@@ -195,46 +480,138 @@ annotate service.ApprovalSteps with @(UI.LineItem: [
         $Type         : 'UI.DataField',
         Label         : 'Status',
         Value         : stepStatus,
-        @UI.Importance: #High,
+        @UI.Importance: #High
+    },
+    {
+        $Type         : 'UI.DataField',
+        Label         : 'Comment',
+        Value         : comment,
+        @UI.Importance: #Medium
     },
     {
         $Type         : 'UI.DataField',
         Label         : 'Decided At',
         Value         : decidedAt,
-        @UI.Importance: #Medium,
+        @UI.Importance: #Medium
     },
-], );
-
-annotate service.ApprovalSteps with @(UI.PresentationVariant: {SortOrder: [
-    {
-        Property  : runNumber,
-        Descending: false
-    },
-    {
-        Property  : stepNumber,
-        Descending: false
-    },
-], }, );
+]);
 
 annotate service.Requests with {
-    title       @Common.FieldControl: #Mandatory;
-    description @Common.FieldControl: #Mandatory;
-    amount      @(
-        Common.FieldControl : #Mandatory,
-        Measures.ISOCurrency: currency,
-    );
-    currency    @Common.FieldControl: #Mandatory;
-    status      @Common.FieldControl: #ReadOnly;
+    totalAmount @Common.FieldControl: #ReadOnly
 };
 
-annotate service.Requests with actions {
-    submit  @(Common.SideEffects: {TargetProperties: ['status']});
-    approve @(Common.SideEffects: {
-        TargetProperties: ['status'],
-        TargetEntities  : [in.steps]
-    });
-    reject  @(Common.SideEffects: {
-        TargetProperties: ['status'],
-        TargetEntities  : [in.steps]
-    });
+// ─── Value Helps ─────────────────────────────────────────────────────────────
+
+annotate service.Requests with {
+    vendorId   @(
+        Common.ValueList               : {
+            CollectionPath: 'VendorHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: vendorId,
+                    ValueListProperty: 'vendorId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: vendorName,
+                    ValueListProperty: 'vendorName',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+    costCenter @(
+        Common.ValueList               : {
+            CollectionPath: 'CostCenterHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: costCenter,
+                    ValueListProperty: 'costCenterId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: costCenterName,
+                    ValueListProperty: 'costCenterName',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'CompanyCode',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+};
+
+annotate service.RequestItems with {
+    productId @(
+        Common.ValueList               : {
+            CollectionPath: 'ProductHelp',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: productId,
+                    ValueListProperty: 'productId',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: unit,
+                    ValueListProperty: 'baseUnit',
+                },
+            ],
+        },
+        Common.ValueListWithFixedValues: false,
+    );
+    lineTotal @Common.FieldControl: #ReadOnly;
+
+};
+// ─── Dropdowns: Priority, Category, Country, Industry ────────────────────────
+
+annotate service.Requests with {
+    priority       @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList               : {
+            CollectionPath: 'PriorityValues',
+            Parameters    : [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: priority,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    category       @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList               : {
+            CollectionPath: 'CategoryValues',
+            Parameters    : [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: category,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    vendorCountry  @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList               : {
+            CollectionPath: 'CountryValues',
+            Parameters    : [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorCountry,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
+    vendorIndustry @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList               : {
+            CollectionPath: 'IndustryValues',
+            Parameters    : [{
+                $Type            : 'Common.ValueListParameterOut',
+                LocalDataProperty: vendorIndustry,
+                ValueListProperty: 'code',
+            }],
+        },
+    );
 };

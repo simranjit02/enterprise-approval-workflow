@@ -25,6 +25,20 @@
           "editableHeaderContent": false
         }
       }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "PurchaseRequest-manage": {
+          "semanticObject": "PurchaseRequest",
+          "action": "manage",
+          "title": "{{PurchaseRequest-manage.flpTitle}}",
+          "subTitle": "{{PurchaseRequest-manage.flpSubtitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
   "sap.ui": {
