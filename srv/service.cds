@@ -82,7 +82,11 @@ service ApprovalService {
                 ]
             }]
             action approve()               returns Requests;
-
+            @restrict: [{
+                grant: ['WRITE'],
+                to   : ['Requester']
+            }]
+            action cancel()                returns Requests;
             @restrict: [{
                 grant: ['WRITE'],
                 to   : [
@@ -94,7 +98,10 @@ service ApprovalService {
 
             @restrict: [{
                 grant: ['WRITE'],
-                to   : ['Manager','Finance']
+                to   : [
+                    'Manager',
+                    'Finance'
+                ]
             }]
             action validateVendor()        returns Requests;
 

@@ -172,7 +172,6 @@ srv.before("NEW", "RequestItems.drafts", async (req) => {
         decision: "PENDING",
       });
     }
-
     await UPDATE(ApprovalStep)
       .set({ stepStatus: "COMPLETED" })
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
@@ -210,6 +209,28 @@ srv.before("NEW", "RequestItems.drafts", async (req) => {
 
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
+  srv.on('cancel','Requests', async(req)=>{
+    const { ID } = req.params[0];
+        const request = await SELECT.one.from(PurchaseRequest).where({ ID });
+    if (!request) return req.error(404, `Request ${ID} not found`);
+    if (request.status !== "DRAFT" && request.status !== "SUBMITTED") {
+      return req.error(
+        400,
+        `Cannot submit — current status is '${request.status}'`
+      );
+    }
+    await UPDATE(PurchaseRequest).set({ status: "CANCELLED" }).where({ ID });
+ await INSERT.into(AuditLog).entries({
+      request_ID: ID,
+      entityName: "PurchaseRequest",
+      entityId: ID,
+      oldValue: request.status,
+      newValue: "CANCELLED",
+      performedBy: req.user?.id || "anonymous",
+    });
+
+    return await SELECT.one.from(PurchaseRequest).where({ ID });
+  })
 // ─── lineTotal + totalAmount on draft activation ────────────────────────────
 srv.after(["CREATE", "UPDATE"], "Requests", async (data, req) => {
   const requestId = data?.ID;

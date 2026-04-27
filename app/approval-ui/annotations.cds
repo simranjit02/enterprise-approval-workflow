@@ -137,6 +137,13 @@ annotate service.Requests with @(
             Determining: true,
             Criticality: #Negative,
         },
+        {
+            $Type : 'UI.DataFieldForAction',
+            Action : 'ApprovalService.cancel',
+            Label : 'Cancel',
+            Determining : true,
+            Criticality : #Negative,
+        },
     ],
 
     UI.Facets                     : [
@@ -365,6 +372,13 @@ annotate service.Requests with actions {
         TargetEntities  : [in.steps],
     });
     reject  @(Common.SideEffects: {
+        TargetProperties: [
+            'in/status',
+            'in/completedAt'
+        ],
+        TargetEntities  : [in.steps],
+    });
+    cancel  @(Common.SideEffects: {
         TargetProperties: [
             'in/status',
             'in/completedAt'
