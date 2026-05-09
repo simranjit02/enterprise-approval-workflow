@@ -170,6 +170,15 @@
                       "width": "140px"
                     }
                   }
+                },
+                "@com.sap.vocabularies.UI.v1.FieldGroup#BusinessDetails": {
+                  "actions": {
+                    "DataFieldForAction::ApprovalService.checkBudget": {
+                      "afterExecution": {
+                        "navigateToInstance": false
+                      }
+                    }
+                  }
                 }
               }
             }

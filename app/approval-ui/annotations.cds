@@ -275,6 +275,11 @@ annotate service.Requests with @(
                 Value: costCenterName,
                 Label: 'Cost Center Name',
             },
+            {
+                $Type : 'UI.DataFieldForAction',
+                Action : 'ApprovalService.checkBudget',
+                Label : 'Check Budget',
+            },
         ],
     },
 
