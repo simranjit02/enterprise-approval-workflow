@@ -1,7 +1,7 @@
 const cds = require("@sap/cds");
 const { SELECT } = require("@sap/cds/lib/ql/cds-ql");
 
-module.exports = (srv) => {
+module.exports = async (srv) => {
   const { PurchaseRequest, ApprovalStep, AuditLog } = cds.entities(
     "com.enterprise.approval",
   );
@@ -37,8 +37,8 @@ module.exports = (srv) => {
     });
     if (!pendingSteps.length) {
       await UPDATE(PurchaseRequest).set({ status: "APPROVED" }).where({ ID });
+      await srv._consumeBudget(request?.costCenter, request?.totalAmount);
     }
-    await srv._consumeBudget(request?.costCenter, request?.fiscalYear, request?.fiscalMonth, request?.amount);
 
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
@@ -67,7 +67,7 @@ module.exports = (srv) => {
     if (!req.user.is(step.approverRole)) {
       return req.error(403, `Only a ${step.approverRole} can reject this step`);
     }
-    await srv._releaseBudget(request?.costCenter, request?.fiscalYear, request?.fiscalMonth, request?.amount);
+    await srv._releaseBudget(request?.costCenter, request?.totalAmount);
 
     // And record who acted:
     await UPDATE(ApprovalStep)
