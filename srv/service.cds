@@ -171,7 +171,9 @@ service ApprovalService {
     entity CategoryValues as projection on db.CategoryValue;
     entity CountryValues  as projection on db.CountryValue;
     entity IndustryValues as projection on db.IndustryValue;
+    entity DepartmentBudget as projection on db.DepartmentBudget;
 }
 
 annotate ApprovalService with @requires: ['authenticated-user'];
+
 // ─── Dropdown Value Help Entities ────────────────────────────────────────────
