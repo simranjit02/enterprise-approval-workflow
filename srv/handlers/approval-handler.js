@@ -38,6 +38,8 @@ module.exports = (srv) => {
     if (!pendingSteps.length) {
       await UPDATE(PurchaseRequest).set({ status: "APPROVED" }).where({ ID });
     }
+    await srv._consumeBudget(request?.costCenter, request?.fiscalYear, request?.fiscalMonth, request?.amount);
+
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "PurchaseRequest",
@@ -65,6 +67,7 @@ module.exports = (srv) => {
     if (!req.user.is(step.approverRole)) {
       return req.error(403, `Only a ${step.approverRole} can reject this step`);
     }
+    await srv._releaseBudget(request?.costCenter, request?.fiscalYear, request?.fiscalMonth, request?.amount);
 
     // And record who acted:
     await UPDATE(ApprovalStep)

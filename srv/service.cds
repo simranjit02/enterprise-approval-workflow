@@ -82,7 +82,11 @@ service ApprovalService {
                 ]
             }]
             action approve()               returns Requests;
-
+            @restrict: [{
+                grant: ['WRITE'],
+                to   : ['Requester']
+            }]
+            action cancel()                returns Requests;
             @restrict: [{
                 grant: ['WRITE'],
                 to   : [
@@ -94,7 +98,10 @@ service ApprovalService {
 
             @restrict: [{
                 grant: ['WRITE'],
-                to   : ['Manager','Finance']
+                to   : [
+                    'Manager',
+                    'Finance'
+                ]
             }]
             action validateVendor()        returns Requests;
 
@@ -164,7 +171,9 @@ service ApprovalService {
     entity CategoryValues as projection on db.CategoryValue;
     entity CountryValues  as projection on db.CountryValue;
     entity IndustryValues as projection on db.IndustryValue;
+    entity DepartmentBudget as projection on db.DepartmentBudget;
 }
 
 annotate ApprovalService with @requires: ['authenticated-user'];
+
 // ─── Dropdown Value Help Entities ────────────────────────────────────────────
