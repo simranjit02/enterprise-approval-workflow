@@ -120,7 +120,6 @@ service ApprovalService {
                 ]
             }]
             action checkBudget()           returns String;
-
         };
 
     entity RequestItems     as projection on db.RequestItem
