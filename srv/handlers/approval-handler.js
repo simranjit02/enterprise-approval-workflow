@@ -35,18 +35,19 @@ module.exports = async (srv) => {
       request_ID: ID,
       decision: "PENDING",
     });
+    let newStatus = "IN_APPROVAL";
     if (!pendingSteps.length) {
       await UPDATE(PurchaseRequest).set({ status: "APPROVED" }).where({ ID });
       await srv._consumeBudget(request?.costCenter, request?.totalAmount);
+      newStatus = "APPROVED";
     }
-
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "PurchaseRequest",
       entityId: ID,
       action: "APPROVE",
       oldValue: request.status,
-      newValue: "APPROVED",
+      newValue: newStatus,
       performedBy: req.user.id,
     });
     return await SELECT.one.from(PurchaseRequest).where({ ID });
@@ -67,7 +68,6 @@ module.exports = async (srv) => {
     if (!req.user.is(step.approverRole)) {
       return req.error(403, `Only a ${step.approverRole} can reject this step`);
     }
-    await srv._releaseBudget(request?.costCenter, request?.totalAmount);
 
     // And record who acted:
     await UPDATE(ApprovalStep)
@@ -80,8 +80,10 @@ module.exports = async (srv) => {
       })
       .where({ ID: step.ID });
     await UPDATE(ApprovalStep)
-      .set({ stepStatus: "SKIPPED", decision: "PENDING" })
+      .set({ stepStatus: "SKIPPED", decision: "SKIPPED" })
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
+    await srv._releaseBudget(request?.costCenter, request?.totalAmount);
+
     await UPDATE(PurchaseRequest).set({ status: "REJECTED" }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
