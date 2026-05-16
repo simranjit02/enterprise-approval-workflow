@@ -252,12 +252,14 @@ annotate service.Requests with @(
             {
                 $Type: 'UI.DataField',
                 Label: 'Country',
-                Value: vendorCountry
+                Value: vendorCountry,
+                @UI.Hidden,
             },
             {
                 $Type: 'UI.DataField',
                 Label: 'Industry',
-                Value: vendorIndustry
+                Value: vendorIndustry,
+                @UI.Hidden,
             },
         ],
     },
@@ -288,7 +290,7 @@ annotate service.Requests with @(
         Data : [
             {
                 $Type: 'UI.DataField',
-                Label: 'Request No.',
+                Label: 'Request No',
                 Value: requestNumber
             },
             {
@@ -349,7 +351,9 @@ annotate service.Requests with {
     priority          @Common.FieldControl: #Mandatory;
     justification     @Common.FieldControl: #Mandatory;
     currency          @Common.FieldControl: #ReadOnly;
-    requestNumber     @Common.FieldControl: #ReadOnly;
+    requestNumber     @(
+        Common.FieldControl: #ReadOnly,
+        );
     status            @Common.FieldControl: #ReadOnly;
     budgetCheckStatus @Common.FieldControl: #ReadOnly;
     aiRiskLevel       @Common.FieldControl: #ReadOnly;
@@ -364,6 +368,7 @@ annotate service.Requests with actions {
     submit  @(Common.SideEffects: {
         TargetProperties: [
             'in/status',
+            'in/requestNumber',
             'in/submittedAt',
             'in/budgetCheckStatus'
         ],

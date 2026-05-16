@@ -6,6 +6,7 @@ module.exports = async (srv) => {
     const {
         PurchaseRequest,
         RequestItem,
+        DepartmentBudget
     } = cds.entities("com.enterprise.approval");
     // ─── External Service Connections ─────────────────────────────────────────
     const S4 = await cds.connect.to("S4HANA_SANDBOX");
@@ -95,4 +96,32 @@ module.exports = async (srv) => {
         await UPDATE(RequestItem).set({ unit: result.BaseUnit }).where({ ID });
         return await SELECT.one.from(RequestItem).where({ ID });
     });
+
+
+    srv.on('checkBudget', ['Requests', 'Requests.drafts'], async (req) => {
+    const { ID } = req.params[0];
+    const { Requests } = srv.entities;
+    const isDraft = req.entity.endsWith('.drafts');
+    const entity = isDraft ? Requests.drafts : Requests;
+    const request = await SELECT.one.from(entity).where({ ID });
+
+    if (!request) return req.error(404, `Request ${ID} not found`);
+    if (!request.costCenter) return req.error(400, 'Cost center is required before checking budget');
+
+    const currentDate = new Date();
+    const fiscalYear = currentDate.getFullYear();
+    const fiscalMonth = currentDate.getMonth() + 1;
+
+    const budget = await SELECT.one.from(DepartmentBudget).where({
+      costCenter: request.costCenter,
+      fiscalYear,
+      fiscalMonth,
+    });
+
+    if (!budget) return req.error(404, `No budget configured for cost center: ${request.costCenter}`);
+
+    return req.info(`Budget for ${request.costCenterName || request.costCenter} | Monthly: ${budget.monthlyAllocation} | Consumed: ${budget.consumedAmount} | Reserved: ${budget.reservedAmount} | Remaining: ${budget.remainingAmount}`);
+  });
 }
+
+
