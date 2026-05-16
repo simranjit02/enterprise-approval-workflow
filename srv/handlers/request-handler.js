@@ -186,7 +186,7 @@ module.exports = async (srv) => {
         request_ID: ID,
         stepNumber: 1,
         approverRole: "Manager",
-        approverUserId: "manager@company.com",
+        approverUserId: "Manager",
         stepStatus: "ACTIVE",
         decision: "PENDING",
       });
@@ -196,7 +196,7 @@ module.exports = async (srv) => {
           request_ID: ID,
           stepNumber: 1,
           approverRole: "Manager",
-          approverUserId: "manager@company.com",
+          approverUserId: "Manager",
           stepStatus: "ACTIVE",
           decision: "PENDING",
         },
@@ -204,7 +204,7 @@ module.exports = async (srv) => {
           request_ID: ID,
           stepNumber: 2,
           approverRole: "Finance",
-          approverUserId: "finance@company.com",
+          approverUserId: "Finance",
           stepStatus: "ACTIVE",
           decision: "PENDING",
         }

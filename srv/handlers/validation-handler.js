@@ -1,8 +1,6 @@
 const cds = require("@sap/cds");
 
 module.exports = async (srv) => {
-    console.log("FILE LOADED: validation-handler.js");
-
     const {
         PurchaseRequest,
         RequestItem,
@@ -41,7 +39,6 @@ module.exports = async (srv) => {
                 .where({ BusinessPartner: request.vendorId })
                 .columns("BusinessPartner", "BusinessPartnerFullName")
         );
-        console.log("result",result);
         
         if (!result)
             return req.error(404, `Vendor '${request.vendorId}' not found`);

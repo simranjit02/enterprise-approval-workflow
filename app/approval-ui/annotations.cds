@@ -138,11 +138,11 @@ annotate service.Requests with @(
             Criticality: #Negative,
         },
         {
-            $Type : 'UI.DataFieldForAction',
-            Action : 'ApprovalService.cancel',
-            Label : 'Cancel',
-            Determining : true,
-            Criticality : #Negative,
+            $Type      : 'UI.DataFieldForAction',
+            Action     : 'ApprovalService.cancel',
+            Label      : 'Cancel',
+            Determining: true,
+            Criticality: #Negative,
         },
     ],
 
@@ -251,6 +251,11 @@ annotate service.Requests with @(
             },
             {
                 $Type: 'UI.DataField',
+                Label: 'Currency',
+                Value: currency
+            },
+            {
+                $Type: 'UI.DataField',
                 Label: 'Country',
                 Value: vendorCountry,
                 @UI.Hidden,
@@ -279,7 +284,7 @@ annotate service.Requests with @(
             },
             {
                 $Type : 'UI.DataFieldForAction',
-                Action : 'ApprovalService.checkBudget',
+                Action: 'ApprovalService.checkBudget',
                 Label : 'Check Budget',
             },
         ],
@@ -321,11 +326,6 @@ annotate service.Requests with @(
             },
             {
                 $Type: 'UI.DataField',
-                Label: 'Currency',
-                Value: currency
-            },
-            {
-                $Type: 'UI.DataField',
                 Label: 'Budget Status',
                 Value: budgetCheckStatus
             },
@@ -349,17 +349,19 @@ annotate service.Requests with {
     title             @Common.FieldControl: #Mandatory;
     category          @Common.FieldControl: #Mandatory;
     priority          @Common.FieldControl: #Mandatory;
-    justification     @Common.FieldControl: #Mandatory;
-    currency          @Common.FieldControl: #ReadOnly;
-    requestNumber     @(
-        Common.FieldControl: #ReadOnly,
-        );
+    justification     @(
+        Common.FieldControl: #Mandatory,
+        UI.MultiLineText   : true,
+    );
+    currency          @Common.FieldControl: #Mandatory;
+    requestNumber     @Common.FieldControl: #ReadOnly;
     status            @Common.FieldControl: #ReadOnly;
     budgetCheckStatus @Common.FieldControl: #ReadOnly;
     aiRiskLevel       @Common.FieldControl: #ReadOnly;
     aiRiskSummary     @Common.FieldControl: #ReadOnly;
     submittedAt       @Common.FieldControl: #ReadOnly;
     completedAt       @Common.FieldControl: #ReadOnly;
+    totalAmount       @Common.FieldControl: #ReadOnly;
 };
 
 // ─── SideEffects ─────────────────────────────────────────────────────────────
@@ -397,6 +399,8 @@ annotate service.Requests with actions {
     });
 };
 
+// ─── RequestItems: SideEffects + LineItem ─────────────────────────────────────
+
 annotate service.RequestItems with @(Common.SideEffects #RecalcOnChange: {
     SourceProperties: [
         'quantity',
@@ -405,7 +409,6 @@ annotate service.RequestItems with @(Common.SideEffects #RecalcOnChange: {
     TargetProperties: ['lineTotal'],
     TargetEntities  : [request],
 });
-// ─── RequestItems: Child Table ────────────────────────────────────────────────
 
 annotate service.RequestItems with @(UI.LineItem: [
     {
@@ -520,10 +523,6 @@ annotate service.ApprovalSteps with @(UI.LineItem: [
     },
 ]);
 
-annotate service.Requests with {
-    totalAmount @Common.FieldControl: #ReadOnly
-};
-
 // ─── Value Helps ─────────────────────────────────────────────────────────────
 
 annotate service.Requests with {
@@ -567,6 +566,23 @@ annotate service.Requests with {
         },
         Common.ValueListWithFixedValues: false,
     );
+// currency   @(
+//     Common.ValueListWithFixedValues: false,
+//     Common.ValueList               : {
+//         CollectionPath: 'Currencies',
+//         Parameters    : [
+//             {
+//                 $Type            : 'Common.ValueListParameterOut',
+//                 LocalDataProperty: currency,
+//                 ValueListProperty: 'code',
+//             },
+//             {
+//                 $Type            : 'Common.ValueListParameterDisplayOnly',
+//                 ValueListProperty: 'name',
+//             },
+//         ],
+//     },
+// );
 };
 
 annotate service.RequestItems with {
@@ -589,11 +605,28 @@ annotate service.RequestItems with {
         Common.ValueListWithFixedValues: false,
     );
     lineTotal @Common.FieldControl: #ReadOnly;
-
 };
-// ─── Dropdowns: Priority, Category, Country, Industry ────────────────────────
+
+// ─── Dropdowns: Priority, Category, Country, Industry, currency ────────────────────────
 
 annotate service.Requests with {
+    currency       @(
+        Common.ValueListWithFixedValues: true,
+        Common.ValueList               : {
+            CollectionPath: 'CurrencyValues',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterOut',
+                    LocalDataProperty: currency,
+                    ValueListProperty: 'code',
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'name',
+                },
+            ],
+        },
+    );
     priority       @(
         Common.ValueListWithFixedValues: true,
         Common.ValueList               : {
@@ -638,4 +671,10 @@ annotate service.Requests with {
             }],
         },
     );
+};
+
+// ─── Measures ────────────────────────────────────────────────────────────────
+
+annotate service.Requests with {
+    totalAmount @Measures.ISOCurrency: currency;
 };
