@@ -37,7 +37,7 @@ module.exports = async (srv) => {
     });
     let newStatus = "IN_APPROVAL";
     if (!pendingSteps.length) {
-      await UPDATE(PurchaseRequest).set({ status: "APPROVED" }).where({ ID });
+      await UPDATE(PurchaseRequest).set({ status: "APPROVED",completedAt: new Date() }).where({ ID });
       await srv._consumeBudget(request?.costCenter, request?.totalAmount);
       newStatus = "APPROVED";
     }
@@ -76,7 +76,7 @@ module.exports = async (srv) => {
         decision: "REJECTED",
         comment: req.data.comment || "No reason provided",
         decidedAt: new Date(),
-        approverUserId: req.user.id,  // capture real identity at action time
+        approverUserId: req.user.id,  
       })
       .where({ ID: step.ID });
     await UPDATE(ApprovalStep)
@@ -84,7 +84,7 @@ module.exports = async (srv) => {
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
     await srv._releaseBudget(request?.costCenter, request?.totalAmount);
 
-    await UPDATE(PurchaseRequest).set({ status: "REJECTED" }).where({ ID });
+    await UPDATE(PurchaseRequest).set({ status: "REJECTED",completedAt: new Date() }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "PurchaseRequest",

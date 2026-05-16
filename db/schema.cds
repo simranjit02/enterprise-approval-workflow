@@ -195,3 +195,7 @@ entity IndustryValue {
     key code  : String(50);
         label : String(100);
 }
+entity CurrencyValue {
+    key code : String(3);
+        name : String(50);
+}

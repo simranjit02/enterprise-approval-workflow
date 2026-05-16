@@ -147,6 +147,7 @@ module.exports = async (srv) => {
         request.costCenterName,
         request.totalAmount
       );
+
       await UPDATE(PurchaseRequest)
         .set({ budgetCheckStatus: budgetStatus })
         .where({ ID });
@@ -185,7 +186,7 @@ module.exports = async (srv) => {
         request_ID: ID,
         stepNumber: 1,
         approverRole: "Manager",
-        approverUserId: "manager@company.com",
+        approverUserId: "Manager",
         stepStatus: "ACTIVE",
         decision: "PENDING",
       });
@@ -195,7 +196,7 @@ module.exports = async (srv) => {
           request_ID: ID,
           stepNumber: 1,
           approverRole: "Manager",
-          approverUserId: "manager@company.com",
+          approverUserId: "Manager",
           stepStatus: "ACTIVE",
           decision: "PENDING",
         },
@@ -203,7 +204,7 @@ module.exports = async (srv) => {
           request_ID: ID,
           stepNumber: 2,
           approverRole: "Finance",
-          approverUserId: "finance@company.com",
+          approverUserId: "Finance",
           stepStatus: "ACTIVE",
           decision: "PENDING",
         }
@@ -236,7 +237,6 @@ module.exports = async (srv) => {
       newValue: "IN_APPROVAL",
       performedBy: req.user?.id || "anonymous",
     });
-
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 
@@ -296,31 +296,7 @@ module.exports = async (srv) => {
     await UPDATE(PurchaseRequest).set({ totalAmount }).where({ ID: requestId });
   });
 
-  srv.on('checkBudget', 'Requests.drafts', async (req) => {
-
-
-    const { ID } = req.params[0];
-    const { Requests } = srv.entities;
-    const request = await SELECT.one.from(Requests.drafts).where({ ID });
-
-
-    if (!request) return req.error(404, `Request ${ID} not found`);
-    if (!request.costCenter) return req.error(400, 'Cost center is required before checking budget');
-
-    const currentDate = new Date();
-    const fiscalYear = currentDate.getFullYear();
-    const fiscalMonth = currentDate.getMonth() + 1;
-
-    const budget = await SELECT.one.from(DepartmentBudget).where({
-      costCenter: request.costCenter,
-      fiscalYear,
-      fiscalMonth,
-    });
-
-    if (!budget) return req.error(404, `No budget configured for cost center: ${request.costCenter}`);
-
-    return req.info(`Budget for ${request.costCenterName || request.costCenter} | Monthly: ${budget.monthlyAllocation} | Consumed: ${budget.consumedAmount} | Reserved: ${budget.reservedAmount} | Remaining: ${budget.remainingAmount}`);
-  });
+ 
 
   // ─── Export budget helpers for use in approval-handler.js ─────────────────
   srv._releaseBudget = releaseBudget;
