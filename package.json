@@ -4,20 +4,24 @@
   "description": "Enterprise Approval Workflow built with SAP CAP, XSUAA and SAP Build Process Automation.",
   "dependencies": {
     "@cap-js/hana": "^2",
-    "@sap/cds": "^9",
-    "@sap/xssec": "^4",
-    "express": "^4",
     "@sap-cloud-sdk/connectivity": "^4",
     "@sap-cloud-sdk/http-client": "^4",
-    "@sap-cloud-sdk/resilience": "^4"
+    "@sap-cloud-sdk/resilience": "^4",
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
+    "express": "^4"
   },
   "devDependencies": {
+    "@cap-js/cds-test": "^1.0.1",
     "@cap-js/sqlite": "^2",
     "@sap/cds-dk": "^9",
-    "cds-plugin-ui5": "^0.13.0"
+    "cds-plugin-ui5": "^0.13.0",
+    "vitest": "^4.1.6"
   },
   "scripts": {
     "start": "cds-serve",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "watch-approval-ui": "cds watch --open approvalui/index.html?sap-ui-xx-viewCache=false --livereload false"
   },
   "private": true,
@@ -51,6 +55,12 @@
             "password": "requester",
             "roles": [
               "Requester"
+            ]
+          },
+          "noaccess@company.com": {
+            "password": "noaccess",
+            "roles": [
+              "Viewer"
             ]
           }
         }
