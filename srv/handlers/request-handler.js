@@ -35,7 +35,7 @@ module.exports = async (srv) => {
       );
     }
 
-    if (budget.remainingAmount < amount) {
+    if (parseFloat(budget.remainingAmount) < parseFloat(amount)) {
       throw new Error(
         `Insufficient budget for ${costCenterName} — requested: ${amount}, remaining: ${budget.remainingAmount}`
       );
@@ -43,8 +43,8 @@ module.exports = async (srv) => {
 
     await UPDATE(DepartmentBudget)
       .set({
-        reservedAmount: budget.reservedAmount + amount,
-        remainingAmount: budget.remainingAmount - amount,
+        reservedAmount: parseFloat(budget.reservedAmount) + parseFloat(amount),
+        remainingAmount: parseFloat(budget.remainingAmount) - parseFloat(amount),
       })
       .where({ costCenter, fiscalYear, fiscalMonth });
 
@@ -274,29 +274,30 @@ module.exports = async (srv) => {
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 
-  // ─── lineTotal + totalAmount recalculation ─────────────────────────────────
+// ─── lineTotal + totalAmount recalculation ─────────────────────────────────
   srv.after(["CREATE", "UPDATE"], "Requests", async (data, req) => {
     const requestId = data?.ID;
     if (!requestId) return;
 
-    const items = data.items;
-    if (!items || !items.length) return;
+    const items = await SELECT.from(RequestItem).where({ request_ID: requestId });
+    if (!items.length) {
+        await UPDATE(PurchaseRequest).set({ totalAmount: 0 }).where({ ID: requestId });
+        return;
+    }
 
     let totalAmount = 0;
-
     for (const item of items) {
-      const qty = parseFloat(item.quantity) || 0;
-      const price = parseFloat(item.unitPrice) || 0;
-      const lineTotal = qty * price;
-      totalAmount += lineTotal;
-
-      await UPDATE(RequestItem).set({ lineTotal }).where({ ID: item.ID });
+        const qty = parseFloat(item.quantity) || 0;
+        const price = parseFloat(item.unitPrice) || 0;
+        const lineTotal = qty * price;
+        totalAmount += lineTotal;
+        await UPDATE(RequestItem).set({ lineTotal }).where({ ID: item.ID });
     }
 
     await UPDATE(PurchaseRequest).set({ totalAmount }).where({ ID: requestId });
-  });
+});
 
- 
+
 
   // ─── Export budget helpers for use in approval-handler.js ─────────────────
   srv._releaseBudget = releaseBudget;

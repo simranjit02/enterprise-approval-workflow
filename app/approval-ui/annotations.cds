@@ -1,9 +1,11 @@
 using ApprovalService as service from '../../srv/service';
-
 // ─── Requests: Header + List + Actions ───────────────────────────────────────
 
 annotate service.Requests with @(
-
+ UI.SelectionFields: [
+        priority,
+        category
+    ],
     UI.HeaderInfo                 : {
         TypeName      : 'Purchase Request',
         TypeNamePlural: 'Purchase Requests',
