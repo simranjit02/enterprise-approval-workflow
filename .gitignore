@@ -35,3 +35,9 @@ resources/
 
 # @cap-js/cds-typer
 @cds-models
+
+# zip
+*.zip
+
+#env
+.env

@@ -26,6 +26,7 @@ modules:
     requires:
       - name: enterprise-approval-workflow-db
       - name: enterprise-approval-workflow-auth
+      - name: enterprise-approval-workflow-destination
 
   - name: enterprise-approval-workflow-db-deployer
     type: hdb
