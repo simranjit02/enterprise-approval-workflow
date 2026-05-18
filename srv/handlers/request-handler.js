@@ -1,5 +1,6 @@
 "use strict";
 const cds = require("@sap/cds");
+const { sendAlert } = require("./ans-helper");
 
 module.exports = async (srv) => {
   const {
@@ -236,6 +237,12 @@ module.exports = async (srv) => {
       oldValue: request.status,
       newValue: "IN_APPROVAL",
       performedBy: req.user?.id || "anonymous",
+    });
+    await sendAlert({
+      eventType: "purchase-request.submitted",
+      severity: "INFO",
+      subject: `New Purchase Request Submitted: ${request.requestNumber || ID}`,
+      body: `Request submitted by ${req.user?.id || "anonymous"} for ${request.costCenterName} — Amount: ${request.totalAmount} EUR`
     });
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });

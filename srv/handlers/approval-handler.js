@@ -1,6 +1,6 @@
 const cds = require("@sap/cds");
 const { SELECT } = require("@sap/cds/lib/ql/cds-ql");
-
+const { sendAlert } = require("./ans-helper");
 module.exports = async (srv) => {
   const { PurchaseRequest, ApprovalStep, AuditLog } = cds.entities(
     "com.enterprise.approval",
@@ -37,7 +37,7 @@ module.exports = async (srv) => {
     });
     let newStatus = "IN_APPROVAL";
     if (!pendingSteps.length) {
-      await UPDATE(PurchaseRequest).set({ status: "APPROVED",completedAt: new Date() }).where({ ID });
+      await UPDATE(PurchaseRequest).set({ status: "APPROVED", completedAt: new Date() }).where({ ID });
       await srv._consumeBudget(request?.costCenter, request?.totalAmount);
       newStatus = "APPROVED";
     }
@@ -49,6 +49,12 @@ module.exports = async (srv) => {
       oldValue: request.status,
       newValue: newStatus,
       performedBy: req.user.id,
+    });
+    await sendAlert({
+      eventType: "purchase-request.approved",
+      severity: "INFO",
+      subject: `Purchase Request Approved: ${request.requestNumber || ID}`,
+      body: `Request approved by ${req.user.id} for ${request.costCenterName} — Amount: ${request.totalAmount} EUR`
     });
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
@@ -76,7 +82,7 @@ module.exports = async (srv) => {
         decision: "REJECTED",
         comment: req.data.comment || "No reason provided",
         decidedAt: new Date(),
-        approverUserId: req.user.id,  
+        approverUserId: req.user.id,
       })
       .where({ ID: step.ID });
     await UPDATE(ApprovalStep)
@@ -84,7 +90,7 @@ module.exports = async (srv) => {
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
     await srv._releaseBudget(request?.costCenter, request?.totalAmount);
 
-    await UPDATE(PurchaseRequest).set({ status: "REJECTED",completedAt: new Date() }).where({ ID });
+    await UPDATE(PurchaseRequest).set({ status: "REJECTED", completedAt: new Date() }).where({ ID });
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "PurchaseRequest",
@@ -93,6 +99,12 @@ module.exports = async (srv) => {
       oldValue: request.status,
       newValue: "REJECTED",
       performedBy: req.user.id,
+    });
+    await sendAlert({
+      eventType: "purchase-request.rejected",
+      severity: "WARNING",
+      subject: `Purchase Request Rejected: ${request.requestNumber || ID}`,
+      body: `Request rejected by ${req.user.id} for ${request.costCenterName} — Reason: ${req.data.comment || "No reason provided"}`
     });
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });

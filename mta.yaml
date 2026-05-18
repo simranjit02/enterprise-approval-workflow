@@ -53,6 +53,8 @@ modules:
       - name: enterprise-approval-workflow-auth
       - name: enterprise-approval-workflow-html5-runtime
       - name: enterprise-approval-workflow-destination
+      - name: enterprise-approval-workflow-ans
+
     provides:
       - name: app-api
         properties:
@@ -135,6 +137,11 @@ resources:
       service: html5-apps-repo
       service-plan: app-host
       service-name: enterprise-approval-workflow-html5-host
+      
+  - name: enterprise-approval-workflow-ans
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: enterprise-approval-workflow-ans
 
   - name: enterprise-approval-workflow-html5-runtime
     type: org.cloudfoundry.managed-service
