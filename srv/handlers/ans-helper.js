@@ -4,10 +4,10 @@ async function getANSCredentials() {
 }
 
 async function getANSToken(credentials) {
-    const response = await fetch(`${credentials.oauth_url}/oauth/token`, {
+    const response = await fetch(credentials.oauth_url, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `grant_type=client_credentials&client_id=${credentials.client_id}&client_secret=${credentials.client_secret}`
+        body: `client_id=${credentials.client_id}&client_secret=${credentials.client_secret}`
     });
     const data = await response.json();
     return data.access_token;
