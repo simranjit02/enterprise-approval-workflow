@@ -34,6 +34,11 @@ async function sendAlert({ eventType, severity = "INFO", subject, body }) {
                 category: "NOTIFICATION",
                 subject,
                 body,
+                resource: {
+                    resourceName: "enterprise-approval-workflow",
+                    resourceType: "CAP Application",
+                    tags: {}
+                },
                 tags: { "ans:enableEmail": "true" }
             })
         });
