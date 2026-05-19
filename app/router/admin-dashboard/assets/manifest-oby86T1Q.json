@@ -1,0 +1,12 @@
+{
+  "_version": "1.12.0",
+  "sap.app": {
+    "id": "admindashboard",
+    "type": "application",
+    "title": "Admin Dashboard",
+    "description": "Enterprise Approval Admin Dashboard",
+    "applicationVersion": {
+      "version": "1.0.0"
+    }
+  }
+}
