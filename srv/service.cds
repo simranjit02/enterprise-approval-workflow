@@ -133,6 +133,7 @@ service ApprovalService {
             action validateProduct() returns RequestItems;
         };
 
+
     entity ApprovalSteps    as projection on db.ApprovalStep
                                order by
                                    stepNumber asc;
@@ -176,14 +177,23 @@ service ApprovalService {
             CountryOfOrigin,
             ItemCategoryGroup
         };
-// ─── Dropdown Value Help Entities ────────────────────────────────────────────
+
+    // ─── Dropdown Value Help Entities ────────────────────────────────────────────
     entity PriorityValues   as projection on db.PriorityValue;
     entity CategoryValues   as projection on db.CategoryValue;
     entity CountryValues    as projection on db.CountryValue;
     entity IndustryValues   as projection on db.IndustryValue;
+    entity CurrencyValues   as projection on db.CurrencyValue;
     entity DepartmentBudget as projection on db.DepartmentBudget;
-    entity CurrencyValues as projection on db.CurrencyValue;
+
+    @restrict: [{
+        grant: ['WRITE'],
+        to   : ['Admin']
+    }]
+    action setMonthlyBudget(costCenter: String,
+                            fiscalYear: Integer,
+                            fiscalMonth: Integer,
+                            budgetAmount: Decimal) returns String;
 }
 
 annotate ApprovalService with @requires: ['authenticated-user'];
-

@@ -29,3 +29,13 @@
 
 # GET http://localhost:4004/odata/v4/request/Requests(ID=f2023716-260c-4727-b92c-2dcb180ddb72,IsActiveEntity=true)/steps
 # POST http://localhost:4004/odata/v4/request/Requests(ID=f2023716-260c-4727-b92c-2dcb180ddb72,IsActiveEntity=true)/approve
+ POST http://localhost:4004/odata/v4/approval/setMonthlyBudget
+Content-Type: application/json
+Authorization: Basic dGVzdEBjb21wYW55LmNvbTp0ZXN0
+
+{
+  "costCenter": "CC001",
+  "fiscalYear": 2026,
+  "fiscalMonth": 5,
+  "budgetAmount": 75000
+}

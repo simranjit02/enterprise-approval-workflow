@@ -55,8 +55,8 @@ entity DepartmentBudget : cuid, managed {
     costCenter        : String(20) not null;
     fiscalYear        : Integer not null;
     fiscalMonth       : Integer not null;
-    totalAnnualBudget : Decimal(15, 2) not null;
-    monthlyAllocation : Decimal(15, 2) not null;
+    totalAnnualBudget : Decimal(15, 2);
+    monthlyAllocation : Decimal(15, 2);
     consumedAmount    : Decimal(15, 2) default 0;
     reservedAmount    : Decimal(15, 2) default 0;
     remainingAmount   : Decimal(15, 2);
@@ -97,7 +97,7 @@ entity BusinessExecutionLog : cuid, managed {
 }
 
 entity AuditLog : cuid, managed {
-    request     : Association to one PurchaseRequest not null;
+    request     : Association to one PurchaseRequest;
     entityName  : String(100);
     entityId    : UUID;
     action      : String(50);
