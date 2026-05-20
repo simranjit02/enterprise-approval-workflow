@@ -41,3 +41,6 @@ resources/
 
 #env
 .env
+
+app/admin-dashboard/
+app/router/admin-dashboard/
