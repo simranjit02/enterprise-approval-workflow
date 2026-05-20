@@ -79,10 +79,24 @@ modules:
             - approvalui.zip
           name: approvalui
           target-path: resources/
+        - artifacts:
+            - adminui.zip
+          name: adminui
+          target-path: resources/
 
   - name: approvalui
     type: html5
     path: app/approval-ui
+    build-parameters:
+      build-result: dist
+      builder: custom
+      commands:
+        - npm install
+        - npm run build:cf
+      supported-platforms: []
+  - name: adminui
+    type: html5
+    path: app/admin-ui
     build-parameters:
       build-result: dist
       builder: custom
