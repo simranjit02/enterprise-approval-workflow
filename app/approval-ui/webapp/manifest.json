@@ -118,6 +118,7 @@
             "settings": {
               "contextPath": "/Requests",
               "variantManagement": "Page",
+              "initialLoad": true,
               "navigation": {
                 "Requests": {
                   "detail": {
