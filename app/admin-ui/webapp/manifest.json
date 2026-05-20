@@ -1,0 +1,126 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "admin.ui",
+    "type": "application",
+    "title": "Admin Panel",
+    "description": "Admin panel for enterprise approval workflow",
+    "applicationVersion": { "version": "1.0.0" },
+    "dataSources": {
+      "AdminService": {
+        "uri": "/odata/v4/admin/",
+        "type": "OData",
+        "settings": { "odataVersion": "4.0" }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "fullWidth": false
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.120.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.ushell": {},
+        "sap.fe.templates": {}
+      }
+    },
+    "models": {
+      "": {
+        "dataSource": "AdminService",
+        "preload": true,
+        "settings": { "synchronizationMode": "None", "operationMode": "Server", "autoExpandSelect": true }
+      },
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": { "bundleName": "admin.ui.i18n.i18n" }
+      }
+    },
+    "routing": {
+      "routes": [
+        {
+          "pattern": ":?query:",
+          "name": "DepartmentBudgetsList",
+          "target": "DepartmentBudgetsList"
+        },
+        {
+          "pattern": "DepartmentBudgets({key}):?query:",
+          "name": "DepartmentBudgetsObject",
+          "target": "DepartmentBudgetsObject"
+        },
+        {
+          "pattern": "PurchaseRequests:?query:",
+          "name": "PurchaseRequestsList",
+          "target": "PurchaseRequestsList"
+        },
+        {
+          "pattern": "PurchaseRequests({key}):?query:",
+          "name": "PurchaseRequestsObject",
+          "target": "PurchaseRequestsObject"
+        },
+        {
+          "pattern": "AuditLogs:?query:",
+          "name": "AuditLogsList",
+          "target": "AuditLogsList"
+        }
+      ],
+      "targets": {
+        "DepartmentBudgetsList": {
+          "type": "Component",
+          "id": "DepartmentBudgetsList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": {
+              "entitySet": "DepartmentBudgets",
+              "initialLoad": true,
+              "navigation": {
+                "DepartmentBudgets": { "detail": { "route": "DepartmentBudgetsObject" } }
+              }
+            }
+          }
+        },
+        "DepartmentBudgetsObject": {
+          "type": "Component",
+          "id": "DepartmentBudgetsObject",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": { "entitySet": "DepartmentBudgets" }
+          }
+        },
+        "PurchaseRequestsList": {
+          "type": "Component",
+          "id": "PurchaseRequestsList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": {
+              "entitySet": "PurchaseRequests",
+              "navigation": {
+                "PurchaseRequests": { "detail": { "route": "PurchaseRequestsObject" } }
+              }
+            }
+          }
+        },
+        "PurchaseRequestsObject": {
+          "type": "Component",
+          "id": "PurchaseRequestsObject",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": { "entitySet": "PurchaseRequests" }
+          }
+        },
+        "AuditLogsList": {
+          "type": "Component",
+          "id": "AuditLogsList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": { "entitySet": "AuditLogs" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -45,6 +45,10 @@ modules:
       keep-existing-routes: true
       disk-quota: 256M
       memory: 256M
+    build-parameters:
+      builder: custom
+      commands:
+        - npm install --production
     requires:
       - name: srv-api
         group: destinations
@@ -55,7 +59,6 @@ modules:
       - name: enterprise-approval-workflow-auth
       - name: enterprise-approval-workflow-html5-runtime
       - name: enterprise-approval-workflow-destination
-
     provides:
       - name: app-api
         properties:
