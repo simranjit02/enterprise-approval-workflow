@@ -27,6 +27,7 @@ entity PurchaseRequest : cuid, managed {
     status                : Status default 'DRAFT';
     submittedAt           : Timestamp;
     completedAt           : Timestamp;
+    virtual isApprover    : Boolean;
     items                 : Composition of many RequestItem
                                 on items.request = $self;
     steps                 : Composition of many ApprovalStep

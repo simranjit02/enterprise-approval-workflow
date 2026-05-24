@@ -304,7 +304,20 @@ module.exports = async (srv) => {
     await UPDATE(PurchaseRequest).set({ totalAmount }).where({ ID: requestId });
   });
 
+// ─── Populate isApprover virtual field ────────────────────────────────────
+srv.after("READ", "Requests", (data, req) => {
+  const isApprover =
+    req.user.is("Manager") ||
+    req.user.is("Finance") ||
+    req.user.is("FinanceDirector") ||
+    req.user.is("Admin");
 
+  const fill = (row) => {
+    if (row) row.isApprover = isApprover;
+  };
+
+  Array.isArray(data) ? data.forEach(fill) : fill(data);
+});
 
   // ─── Export budget helpers for use in approval-handler.js ─────────────────
   srv._releaseBudget = releaseBudget;
