@@ -2,7 +2,7 @@ using ApprovalService as service from '../../srv/service';
 // ─── Requests: Header + List + Actions ───────────────────────────────────────
 
 annotate service.Requests with @(
- UI.SelectionFields: [
+    UI.SelectionFields            : [
         priority,
         category
     ],
@@ -119,32 +119,102 @@ annotate service.Requests with @(
 
     UI.Identification             : [
         {
-            $Type      : 'UI.DataFieldForAction',
-            Action     : 'ApprovalService.submit',
-            Label      : 'Submit',
-            Determining: true,
-            Criticality: #Positive,
+            $Type        : 'UI.DataFieldForAction',
+            Action       : 'ApprovalService.submit',
+            Label        : 'Submit',
+            Determining  : true,
+            Criticality  : #Positive,
+            ![@UI.Hidden]: {$edmJson: {$Or: [
+                {$Eq: [
+                    {$Path: 'IsActiveEntity'},
+                    {$Bool: false}
+                ]},
+                {$Ne: [
+                    {$Path: 'status'},
+                    {$String: 'DRAFT'}
+                ]}
+            ]}}
         },
         {
-            $Type      : 'UI.DataFieldForAction',
-            Action     : 'ApprovalService.approve',
-            Label      : 'Approve',
-            Determining: true,
-            Criticality: #Positive,
+            $Type        : 'UI.DataFieldForAction',
+            Action       : 'ApprovalService.approve',
+            Label        : 'Approve',
+            Determining  : true,
+            Criticality  : #Positive,
+            ![@UI.Hidden]: {$edmJson: {$Or: [
+                {$Eq: [
+                    {$Path: 'IsActiveEntity'},
+                    {$Bool: false}
+                ]},
+                {$Eq: [
+                    {$Path: 'isApprover'},
+                    {$Bool: false}
+                ]},
+                {$And: [
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'IN_APPROVAL'}
+                    ]},
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'BUDGET_ESCALATION'}
+                    ]}
+                ]}
+            ]}}
         },
         {
-            $Type      : 'UI.DataFieldForAction',
-            Action     : 'ApprovalService.reject',
-            Label      : 'Reject',
-            Determining: true,
-            Criticality: #Negative,
+            $Type        : 'UI.DataFieldForAction',
+            Action       : 'ApprovalService.reject',
+            Label        : 'Reject',
+            Determining  : true,
+            Criticality  : #Negative,
+            ![@UI.Hidden]: {$edmJson: {$Or: [
+                {$Eq: [
+                    {$Path: 'IsActiveEntity'},
+                    {$Bool: false}
+                ]},
+                {$Eq: [
+                    {$Path: 'isApprover'},
+                    {$Bool: false}
+                ]},
+                {$And: [
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'IN_APPROVAL'}
+                    ]},
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'BUDGET_ESCALATION'}
+                    ]}
+                ]}
+            ]}}
         },
         {
-            $Type      : 'UI.DataFieldForAction',
-            Action     : 'ApprovalService.cancel',
-            Label      : 'Cancel',
-            Determining: true,
-            Criticality: #Negative,
+            $Type        : 'UI.DataFieldForAction',
+            Action       : 'ApprovalService.cancel',
+            Label        : 'Cancel',
+            Determining  : true,
+            Criticality  : #Negative,
+            ![@UI.Hidden]: {$edmJson: {$Or: [
+                {$Eq: [
+                    {$Path: 'IsActiveEntity'},
+                    {$Bool: false}
+                ]},
+                {$And: [
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'DRAFT'}
+                    ]},
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'IN_APPROVAL'}
+                    ]},
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'BUDGET_ESCALATION'}
+                    ]}
+                ]}
+            ]}}
         },
     ],
 

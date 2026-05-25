@@ -1,4 +1,16 @@
 using AdminService as service from '../../srv/admin-service';
+annotate service.DepartmentBudgets with {
+    // Key fields: create pe editable, save ke baad lock
+    costCenter  @Core.Immutable;
+    fiscalYear  @Core.Immutable  @Measures.Unit: ' ';
+    fiscalMonth @Core.Immutable;
+
+    // System fields: hamesha read-only
+    consumedAmount  @Common.FieldControl: #ReadOnly;
+    reservedAmount  @Common.FieldControl: #ReadOnly;
+    remainingAmount @Common.FieldControl: #ReadOnly;
+    lastResetAt     @Common.FieldControl: #ReadOnly;
+};
 
 // ─── Purchase Requests List Report ───────────────────────────────────────────
 annotate service.PurchaseRequests with @(
@@ -101,25 +113,37 @@ annotate service.DepartmentBudgets with @(
         { Value: lastResetAt,       Label: 'Last Reset' }
     ]
 );
+annotate service.DepartmentBudgets with {
+    costCenter      @title: 'Cost Center';
+    fiscalYear      @title: 'Year';
+    fiscalMonth     @title: 'Month';
+    monthlyAllocation @title: 'Monthly Budget';
+    totalAnnualBudget @title: 'Total Annual Budget';
+    consumedAmount  @title: 'Consumed';
+    reservedAmount  @title: 'Reserved';
+    remainingAmount @title: 'Remaining';
+    lastResetAt     @title: 'Last Reset';
+};
 
 annotate service.DepartmentBudgets with @(
+    
     UI.FieldGroup #BudgetDetails: {
         Label: 'Budget Details',
         Data: [
-            { Value: costCenter },
-            { Value: fiscalYear },
-            { Value: fiscalMonth },
-            { Value: monthlyAllocation },
-            { Value: totalAnnualBudget }
+            { Value: costCenter, Label: 'Cost Center' },
+            { Value: fiscalYear, @Common.TextFormat : #Plain, Label: 'Year'  },
+            { Value: fiscalMonth, Label: 'Month' },
+            { Value: monthlyAllocation, Label: 'Monthly Budget' },
+            { Value: totalAnnualBudget, Label: 'Total Annual Budget' }
         ]
     },
     UI.FieldGroup #BudgetStatus: {
         Label: 'Current Status',
         Data: [
-            { Value: consumedAmount },
-            { Value: reservedAmount },
-            { Value: remainingAmount },
-            { Value: lastResetAt }
+            { Value: consumedAmount, Label: 'Consumed' },
+            { Value: reservedAmount, Label: 'Reserved' },
+            { Value: remainingAmount, Label: 'Remaining' },
+            { Value: lastResetAt, Label: 'Last Reset' }
         ]
     },
     UI.Facets: [
@@ -127,10 +151,14 @@ annotate service.DepartmentBudgets with @(
         { $Type: 'UI.ReferenceFacet', Label: 'Current Status', Target: '@UI.FieldGroup#BudgetStatus' }
     ],
     UI.HeaderInfo: {
+        
         TypeName: 'Department Budget',
         TypeNamePlural: 'Department Budgets',
         Title: { Value: costCenter },
-        Description: { Value: fiscalYear }
+        Description: { Value: fiscalYear },   
+        Common.SemanticKey: [costCenter, fiscalYear, fiscalMonth]
+
+
     }
 );
 
