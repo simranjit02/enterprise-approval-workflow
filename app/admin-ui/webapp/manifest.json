@@ -5,12 +5,31 @@
     "type": "application",
     "title": "Admin Panel",
     "description": "Admin panel for enterprise approval workflow",
-    "applicationVersion": { "version": "1.0.0" },
+    "applicationVersion": {
+      "version": "1.0.0"
+    },
     "dataSources": {
       "AdminService": {
         "uri": "/odata/v4/admin/",
         "type": "OData",
-        "settings": { "odataVersion": "4.0" }
+        "settings": {
+          "odataVersion": "4.0"
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "AdminUI-manage": {
+          "semanticObject": "AdminUI",
+          "action": "manage",
+          "title": "Admin Panel",
+          "subTitle": "Manage budgets and users",
+          "icon": "sap-icon://settings",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
       }
     }
   },
@@ -33,11 +52,17 @@
       "": {
         "dataSource": "AdminService",
         "preload": true,
-        "settings": { "synchronizationMode": "None", "operationMode": "Server", "autoExpandSelect": true }
+        "settings": {
+          "synchronizationMode": "None",
+          "operationMode": "Server",
+          "autoExpandSelect": true
+        }
       },
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
-        "settings": { "bundleName": "admin.ui.i18n.i18n" }
+        "settings": {
+          "bundleName": "admin.ui.i18n.i18n"
+        }
       }
     },
     "routing": {
@@ -78,7 +103,11 @@
               "entitySet": "DepartmentBudgets",
               "initialLoad": true,
               "navigation": {
-                "DepartmentBudgets": { "detail": { "route": "DepartmentBudgetsObject" } }
+                "DepartmentBudgets": {
+                  "detail": {
+                    "route": "DepartmentBudgetsObject"
+                  }
+                }
               }
             }
           }
@@ -88,7 +117,9 @@
           "id": "DepartmentBudgetsObject",
           "name": "sap.fe.templates.ObjectPage",
           "options": {
-            "settings": { "entitySet": "DepartmentBudgets" }
+            "settings": {
+              "entitySet": "DepartmentBudgets"
+            }
           }
         },
         "PurchaseRequestsList": {
@@ -99,7 +130,11 @@
             "settings": {
               "entitySet": "PurchaseRequests",
               "navigation": {
-                "PurchaseRequests": { "detail": { "route": "PurchaseRequestsObject" } }
+                "PurchaseRequests": {
+                  "detail": {
+                    "route": "PurchaseRequestsObject"
+                  }
+                }
               }
             }
           }
@@ -109,7 +144,9 @@
           "id": "PurchaseRequestsObject",
           "name": "sap.fe.templates.ObjectPage",
           "options": {
-            "settings": { "entitySet": "PurchaseRequests" }
+            "settings": {
+              "entitySet": "PurchaseRequests"
+            }
           }
         },
         "AuditLogsList": {
@@ -117,10 +154,16 @@
           "id": "AuditLogsList",
           "name": "sap.fe.templates.ListReport",
           "options": {
-            "settings": { "entitySet": "AuditLogs" }
+            "settings": {
+              "entitySet": "AuditLogs"
+            }
           }
         }
       }
     }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "approval-workflow"
   }
 }
