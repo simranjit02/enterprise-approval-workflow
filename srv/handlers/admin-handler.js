@@ -6,24 +6,29 @@ module.exports = (srv) => {
     // Draft copies consumed/reserved when opened; take them from the live row so
     // reservations made meanwhile aren't overwritten, and derive remaining from them.
     srv.before('SAVE', 'DepartmentBudgets', async (req) => {
+        if (Number(req.data.monthlyAllocation) < 0) {
+            return req.error({ status: 400, message: 'Monthly budget cannot be negative', target: 'in/monthlyAllocation' })
+        }
         const live = await SELECT.one.from(DepartmentBudgets)
             .columns('consumedAmount', 'reservedAmount')
             .where({ ID: req.data.ID })
         const consumedAmount = Number(live?.consumedAmount) || 0
         const reservedAmount = Number(live?.reservedAmount) || 0
-        Object.assign(req.data, {
-            consumedAmount,
-            reservedAmount,
-            remainingAmount: (Number(req.data.monthlyAllocation) || 0) - consumedAmount - reservedAmount
-        })
+        const remainingAmount = (Number(req.data.monthlyAllocation) || 0) - consumedAmount - reservedAmount
+        Object.assign(req.data, { consumedAmount, reservedAmount, remainingAmount })
+        if (remainingAmount < 0) {
+            req.warn(`Monthly budget is ${-remainingAmount} lower than what is already consumed and reserved. New requests will be blocked`)
+        }
     })
 
     srv.on('resetMonthlyBudget', async (req) => {
         const { costCenter, fiscalYear, fiscalMonth, budgetAmount } = req.data
 
         if (!costCenter || !fiscalYear || !fiscalMonth || budgetAmount == null) {
-            return req.error(400, 'costCenter, fiscalYear, fiscalMonth and budgetAmount are required')
+            return req.error(400, 'Cost center, year, month and budget amount are required')
         }
+        if (fiscalMonth < 1 || fiscalMonth > 12) return req.error(400, 'Month must be between 1 and 12')
+        if (Number(budgetAmount) < 0) return req.error(400, 'Budget amount cannot be negative')
 
         const existing = await SELECT.one.from(DepartmentBudgets).where({
             costCenter, fiscalYear, fiscalMonth
@@ -64,6 +69,10 @@ module.exports = (srv) => {
             performedBy: req.user.id
         })
 
+        if (existing && Number(budgetAmount) < Number(existing.reservedAmount)) {
+            req.warn(`New budget is lower than the ${existing.reservedAmount} already reserved by requests in approval`)
+        }
+        req.notify(`Budget for ${costCenter} — ${fiscalYear}/${fiscalMonth} set to ${budgetAmount}`)
         return `Budget reset for ${costCenter} — ${fiscalYear}/${fiscalMonth}: ${budgetAmount}`
     })
 }

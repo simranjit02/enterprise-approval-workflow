@@ -8,26 +8,8 @@ annotate service.Requests with @(
         category
     ],
     UI.CreateHidden               : {$edmJson: {$Path: '/UserInfo/hideCreate'}},
-    UI.UpdateHidden               : {$edmJson: {$And: [
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'DRAFT'}
-        ]},
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'REJECTED'}
-        ]}
-    ]}},
-    UI.DeleteHidden               : {$edmJson: {$And: [
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'DRAFT'}
-        ]},
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'REJECTED'}
-        ]}
-    ]}},
+    UI.UpdateHidden               : {$edmJson: {$Path: 'hideEdit'}},
+    UI.DeleteHidden               : {$edmJson: {$Path: 'hideEdit'}},
     UI.HeaderInfo                 : {
         TypeName      : 'Purchase Request',
         TypeNamePlural: 'Purchase Requests',
@@ -124,6 +106,10 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
+                {$Ne: [
+                    {$Path: 'isOwner'},
+                    {$Bool: true}
+                ]},
                 {$And: [
                     {$Ne: [
                         {$Path: 'status'},
@@ -188,6 +174,10 @@ annotate service.Requests with @(
                 {$Eq: [
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
+                ]},
+                {$Ne: [
+                    {$Path: 'isOwner'},
+                    {$Bool: true}
                 ]},
                 {$Ne: [
                     {$Path: 'status'},
@@ -410,6 +400,9 @@ annotate service.Requests with {
 annotate service.Requests with actions {
     submit  @(Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/requestNumber',
             'in/submittedAt',
@@ -419,6 +412,9 @@ annotate service.Requests with actions {
     });
     approve @(Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/completedAt'
         ],
@@ -426,13 +422,19 @@ annotate service.Requests with actions {
     });
     reject  @(Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/completedAt'
         ],
         TargetEntities  : [in.steps],
     });
-    cancel  @(Common.SideEffects: {
+    cancel  @(Common.IsActionCritical: true, Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/completedAt'
         ],

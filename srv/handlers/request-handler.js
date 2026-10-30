@@ -128,6 +128,26 @@ module.exports = async (srv) => {
     }
   });
 
+  srv.before("SAVE", "Requests", async (req) => {
+    const date = req.data.requestedDeliveryDate;
+    if (date && date < new Date().toISOString().slice(0, 10)) {
+      req.error({ status: 400, message: "Delivery date cannot be in the past", target: "in/requestedDeliveryDate" });
+    }
+
+    const items = await SELECT.from(srv.entities.RequestItems.drafts)
+      .columns("ID", "itemNumber", "quantity", "unitPrice")
+      .where({ request_ID: req.data.ID });
+    for (const item of items) {
+      const target = (field) => `in/items(ID=${item.ID},IsActiveEntity=false)/${field}`;
+      if (item.quantity != null && Number(item.quantity) <= 0) {
+        req.error({ status: 400, message: `Item ${item.itemNumber}: quantity must be greater than 0`, target: target("quantity") });
+      }
+      if (item.unitPrice != null && Number(item.unitPrice) < 0) {
+        req.error({ status: 400, message: `Item ${item.itemNumber}: unit price cannot be negative`, target: target("unitPrice") });
+      }
+    }
+  });
+
   // ─── submit ────────────────────────────────────────────────────────────────
   srv.on("submit", "Requests", async (req) => {
     const { ID } = req.params[0];
@@ -140,6 +160,10 @@ module.exports = async (srv) => {
         400,
         `Cannot submit — current status is '${request.status}'`
       );
+    }
+
+    if (!(Number(request.totalAmount) > 0)) {
+      return req.error(400, "Add at least one item with a quantity and price before submitting");
     }
 
     // ── Run number check (max 3 submissions) ──
@@ -160,9 +184,19 @@ module.exports = async (srv) => {
         request.totalAmount
       );
 
+      // Warn when this request leaves less than 10% of the month's budget.
+      const budget = await SELECT.one.from(DepartmentBudget)
+        .columns("monthlyAllocation", "remainingAmount")
+        .where({ costCenter: request.costCenter, fiscalYear, fiscalMonth });
+      const allocation = Number(budget.monthlyAllocation) || 0;
+      const lowBudget = allocation > 0 && Number(budget.remainingAmount) < allocation * 0.1;
+      if (lowBudget) {
+        req.warn(`Budget for ${request.costCenterName || request.costCenter} is almost used up: ${budget.remainingAmount} ${request.currency || ""} left this month`);
+      }
+
       await UPDATE(PurchaseRequest)
         .set({
-          budgetCheckStatus: "WITHIN",
+          budgetCheckStatus: lowBudget ? "WARNING" : "WITHIN",
           budgetFiscalYear: fiscalYear,
           budgetFiscalMonth: fiscalMonth,
         })
@@ -254,13 +288,15 @@ module.exports = async (srv) => {
       newValue: "IN_APPROVAL",
       performedBy: req.user?.id || "anonymous",
     });
+    const result = await SELECT.one.from(PurchaseRequest).where({ ID });
     await sendAlert({
       eventType: "purchase-request.submitted",
       severity: "INFO",
-      subject: `New Purchase Request Submitted: ${request.requestNumber || ID}`,
-      body: `Request submitted by ${req.user?.id || "anonymous"} for ${request.costCenterName} — Amount: ${request.totalAmount} EUR`
+      subject: `New Purchase Request Submitted: ${result.requestNumber}`,
+      body: `Request submitted by ${req.user?.id || "anonymous"} for ${request.costCenterName} — Amount: ${request.totalAmount} ${request.currency || ""}`
     });
-    return await SELECT.one.from(PurchaseRequest).where({ ID });
+    req.notify(`Request ${result.requestNumber} submitted for approval`);
+    return result;
   });
 
   // ─── cancel ────────────────────────────────────────────────────────────────
@@ -290,6 +326,7 @@ module.exports = async (srv) => {
       performedBy: req.user?.id || "anonymous",
     });
 
+    req.notify("Request cancelled");
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 
@@ -318,16 +355,25 @@ module.exports = async (srv) => {
 
   srv.on("READ", "UserInfo", (req) => ({ hideCreate: !req.user.is("Requester") }));
 
-  // ─── Populate isApprover virtual field ────────────────────────────────────
-  // True only when this user can act on an active step right now (drives Approve/Reject buttons).
+  // ─── Populate per-user button flags ───────────────────────────────────────
+  // isApprover: user can act on an active step now (Approve/Reject).
+  // isOwner / hideEdit: only the requester submits, cancels, edits or deletes.
+  // Read from the DB because the UI's $select may not include createdBy/status.
   srv.after("READ", "Requests", async (data, req) => {
     const rows = (Array.isArray(data) ? data : [data]).filter((r) => r?.ID);
     if (!rows.length) return;
-    const steps = await SELECT.from(ApprovalStep)
-      .columns("request_ID", "approverRole")
-      .where({ request_ID: { in: rows.map((r) => r.ID) }, stepStatus: "ACTIVE" });
+    const ids = rows.map((r) => r.ID);
+    const [steps, actives] = await Promise.all([
+      SELECT.from(ApprovalStep).columns("request_ID", "approverRole")
+        .where({ request_ID: { in: ids }, stepStatus: "ACTIVE" }),
+      SELECT.from(PurchaseRequest).columns("ID", "createdBy", "status").where({ ID: { in: ids } }),
+    ]);
     for (const row of rows) {
+      const active = actives.find((a) => a.ID === row.ID);
       row.isApprover = steps.some((s) => s.request_ID === row.ID && req.user.is(s.approverRole));
+      // No active row yet = a new draft, which only its creator can see.
+      row.isOwner = !active || active.createdBy === req.user.id;
+      row.hideEdit = !row.isOwner || (!!active && active.status !== "DRAFT" && active.status !== "REJECTED");
     }
   });
 

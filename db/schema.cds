@@ -30,6 +30,8 @@ entity PurchaseRequest : cuid, managed {
     submittedAt           : Timestamp;
     completedAt           : Timestamp;
     virtual isApprover    : Boolean;
+    virtual isOwner       : Boolean; // current user created it
+    virtual hideEdit      : Boolean; // not owner, or no longer DRAFT/REJECTED
     items                 : Composition of many RequestItem
                                 on items.request = $self;
     steps                 : Composition of many ApprovalStep

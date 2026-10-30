@@ -1,5 +1,5 @@
 const cds = require('@sap/cds')
-const { POST, expect } = cds.test(__dirname + '/..')
+const { GET, POST, expect } = cds.test(__dirname + '/..')
 
 const REQUESTER = { auth: { username: 'requester@company.com', password: 'requester' } }
 const MANAGER   = { auth: { username: 'manager@company.com',   password: 'manager'   } }
@@ -50,6 +50,19 @@ describe('reject action', () => {
     )
     expect(result.status).to.equal('REJECTED')
     expect(result.completedAt).to.exist
+  })
+
+  it('after reject only the requester gets Submit and Edit', async () => {
+    await POST(
+      `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.reject`,
+      { comment: 'Too expensive' },
+      MANAGER
+    )
+    const url = `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)?$select=ID,isOwner,hideEdit`
+    const { data: forManager } = await GET(url, MANAGER)
+    expect(forManager).to.include({ isOwner: false, hideEdit: true })
+    const { data: forRequester } = await GET(url, REQUESTER)
+    expect(forRequester).to.include({ isOwner: true, hideEdit: false })
   })
 
   it('sad path: cannot reject a request that is not IN_APPROVAL', async () => {

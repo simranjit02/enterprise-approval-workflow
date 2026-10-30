@@ -111,7 +111,7 @@ service ApprovalService {
                     'Finance'
                 ]
             }]
-            action reject(comment: String) returns Requests;
+            action reject(comment: String @mandatory) returns Requests;
 
             @restrict: [{
                 grant: ['WRITE'],
@@ -219,4 +219,17 @@ annotate ApprovalService with @requires: ['authenticated-user'];
 annotate ApprovalService.Requests with {
     budgetFiscalYear  @readonly;
     budgetFiscalMonth @readonly;
+    title             @mandatory;
+    category          @mandatory;
+    priority          @mandatory;
+    justification     @mandatory;
+    currency          @mandatory;
+    costCenter        @mandatory;
+};
+
+annotate ApprovalService.RequestItems with {
+    productName @mandatory;
+    unit        @mandatory;
+    quantity    @mandatory;
+    unitPrice   @mandatory;
 };
