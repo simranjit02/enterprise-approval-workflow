@@ -1,5 +1,5 @@
 const cds = require('@sap/cds')
-const { POST, expect } = cds.test(__dirname + '/..')
+const { GET, POST, expect } = cds.test(__dirname + '/..')
 
 const REQUESTER = { auth: { username: 'requester@company.com', password: 'requester' } }
 const MANAGER   = { auth: { username: 'manager@company.com',   password: 'manager'   } }
@@ -60,6 +60,25 @@ describe('approve action', () => {
       { ...REQUESTER, validateStatus: () => true }
     )
     expect(status).to.equal(403)
+  })
+
+  it('Finance can approve first when both steps are active', async () => {
+    const { ApprovalStep } = cds.entities('com.enterprise.approval')
+    await INSERT.into(ApprovalStep).entries({
+      request_ID: REQUEST_ID,
+      stepNumber: 2,
+      approverRole: 'Finance',
+      approverUserId: 'Finance',
+      stepStatus: 'ACTIVE',
+      decision: 'PENDING'
+    })
+    const url = `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.approve`
+    const { data: afterFinance } = await POST(url, {}, FINANCE)
+    expect(afterFinance.status).to.equal('IN_APPROVAL')
+    const { data: forFinance } = await GET(`/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)`, FINANCE)
+    expect(forFinance.isApprover).to.equal(false)
+    const { data: afterManager } = await POST(url, {}, MANAGER)
+    expect(afterManager.status).to.equal('APPROVED')
   })
 
   it('sad path: Finance cannot approve a Manager step', async () => {

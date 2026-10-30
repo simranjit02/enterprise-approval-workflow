@@ -3,9 +3,31 @@ using ApprovalService as service from '../../srv/service';
 
 annotate service.Requests with @(
     UI.SelectionFields            : [
+        status,
         priority,
         category
     ],
+    UI.CreateHidden               : {$edmJson: {$Path: '/UserInfo/hideCreate'}},
+    UI.UpdateHidden               : {$edmJson: {$And: [
+        {$Ne: [
+            {$Path: 'status'},
+            {$String: 'DRAFT'}
+        ]},
+        {$Ne: [
+            {$Path: 'status'},
+            {$String: 'REJECTED'}
+        ]}
+    ]}},
+    UI.DeleteHidden               : {$edmJson: {$And: [
+        {$Ne: [
+            {$Path: 'status'},
+            {$String: 'DRAFT'}
+        ]},
+        {$Ne: [
+            {$Path: 'status'},
+            {$String: 'REJECTED'}
+        ]}
+    ]}},
     UI.HeaderInfo                 : {
         TypeName      : 'Purchase Request',
         TypeNamePlural: 'Purchase Requests',
@@ -52,7 +74,7 @@ annotate service.Requests with @(
                         'HIGH'
                     ]},
                     2,
-                    2
+                    0
                 ]}
             ]}},
         },
@@ -80,38 +102,11 @@ annotate service.Requests with @(
                     {$If: [
                         {$Eq: [
                             {$Path: 'status'},
-                            'BUDGET_ESCALATION'
+                            'DRAFT'
                         ]},
-                        2,
-                        {$If: [
-                            {$Eq: [
-                                {$Path: 'status'},
-                                'DRAFT'
-                            ]},
-                            0,
-                            1
-                        ]}
+                        0,
+                        1
                     ]}
-                ]}
-            ]}},
-        },
-        {
-            $Type      : 'UI.DataField',
-            Label      : 'AI Risk',
-            Value      : aiRiskLevel,
-            Criticality: {$edmJson: {$If: [
-                {$Eq: [
-                    {$Path: 'aiRiskLevel'},
-                    'LOW'
-                ]},
-                3,
-                {$If: [
-                    {$Eq: [
-                        {$Path: 'aiRiskLevel'},
-                        'MEDIUM'
-                    ]},
-                    2,
-                    1
                 ]}
             ]}},
         },
@@ -129,9 +124,15 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
-                {$Ne: [
-                    {$Path: 'status'},
-                    {$String: 'DRAFT'}
+                {$And: [
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'DRAFT'}
+                    ]},
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'REJECTED'}
+                    ]}
                 ]}
             ]}}
         },
@@ -146,19 +147,13 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
-                {$Eq: [
+                {$Ne: [
                     {$Path: 'isApprover'},
-                    {$Bool: false}
+                    {$Bool: true}
                 ]},
-                {$And: [
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'IN_APPROVAL'}
-                    ]},
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'BUDGET_ESCALATION'}
-                    ]}
+                {$Ne: [
+                    {$Path: 'status'},
+                    {$String: 'IN_APPROVAL'}
                 ]}
             ]}}
         },
@@ -173,19 +168,13 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
-                {$Eq: [
+                {$Ne: [
                     {$Path: 'isApprover'},
-                    {$Bool: false}
+                    {$Bool: true}
                 ]},
-                {$And: [
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'IN_APPROVAL'}
-                    ]},
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'BUDGET_ESCALATION'}
-                    ]}
+                {$Ne: [
+                    {$Path: 'status'},
+                    {$String: 'IN_APPROVAL'}
                 ]}
             ]}}
         },
@@ -200,19 +189,9 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
-                {$And: [
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'DRAFT'}
-                    ]},
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'IN_APPROVAL'}
-                    ]},
-                    {$Ne: [
-                        {$Path: 'status'},
-                        {$String: 'BUDGET_ESCALATION'}
-                    ]}
+                {$Ne: [
+                    {$Path: 'status'},
+                    {$String: 'DRAFT'}
                 ]}
             ]}}
         },
@@ -266,7 +245,7 @@ annotate service.Requests with @(
         {
             $Type : 'UI.ReferenceFacet',
             ID    : 'BudgetRisk',
-            Label : 'Budget & Risk',
+            Label : 'Budget',
             Target: '@UI.FieldGroup#BudgetRisk',
         },
         {
@@ -400,16 +379,6 @@ annotate service.Requests with @(
                 $Type: 'UI.DataField',
                 Label: 'Budget Status',
                 Value: budgetCheckStatus
-            },
-            {
-                $Type: 'UI.DataField',
-                Label: 'AI Risk Level',
-                Value: aiRiskLevel
-            },
-            {
-                $Type: 'UI.DataField',
-                Label: 'AI Risk Summary',
-                Value: aiRiskSummary
             },
         ],
     },

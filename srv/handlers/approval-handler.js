@@ -1,10 +1,20 @@
 const cds = require("@sap/cds");
-const { SELECT } = require("@sap/cds/lib/ql/cds-ql");
 const { sendAlert } = require("./ans-helper");
 module.exports = async (srv) => {
   const { PurchaseRequest, ApprovalStep, AuditLog } = cds.entities(
     "com.enterprise.approval",
   );
+
+  // Manager and Finance steps are active together, so pick the one this user can act on.
+  const activeStepFor = async (ID, req) => {
+    const steps = await SELECT.from(ApprovalStep)
+      .where({ request_ID: ID, stepStatus: "ACTIVE" })
+      .orderBy("stepNumber");
+    if (!steps.length) req.reject(403, "No active step found for you");
+    const step = steps.find((s) => req.user.is(s.approverRole));
+    if (!step) req.reject(403, `Only a ${steps.map((s) => s.approverRole).join(" or ")} can act on this request`);
+    return step;
+  };
 
   srv.on("approve", "Requests", async (req) => {
     const { ID } = req.params[0];
@@ -12,15 +22,7 @@ module.exports = async (srv) => {
     if (request.status !== "IN_APPROVAL") {
       return req.error(400, "Request is not available for approval");
     }
-    const step = await SELECT.one
-      .from(ApprovalStep)
-      .where({ request_ID: ID, stepStatus: "ACTIVE" });
-    if (!step) {
-      return req.error(403, "No active step found for you");
-    }
-    if (!req.user.is(step.approverRole)) {
-      return req.error(403, `Only a ${step.approverRole} can approve this step`);
-    }
+    const step = await activeStepFor(ID, req);
 
     // And record who acted:
     await UPDATE(ApprovalStep)
@@ -65,15 +67,7 @@ module.exports = async (srv) => {
     if (request.status !== "IN_APPROVAL") {
       return req.error(400, "Request is not available for approval");
     }
-    const step = await SELECT.one
-      .from(ApprovalStep)
-      .where({ request_ID: ID, stepStatus: "ACTIVE" });
-    if (!step) {
-      return req.error(403, "No active step found for you");
-    }
-    if (!req.user.is(step.approverRole)) {
-      return req.error(403, `Only a ${step.approverRole} can reject this step`);
-    }
+    const step = await activeStepFor(ID, req);
 
     // And record who acted:
     await UPDATE(ApprovalStep)
@@ -86,7 +80,7 @@ module.exports = async (srv) => {
       })
       .where({ ID: step.ID });
     await UPDATE(ApprovalStep)
-      .set({ stepStatus: "SKIPPED", decision: "SKIPPED" })
+      .set({ stepStatus: "SKIPPED", decision: "SKIPPED" }) // SKIPPED, not PENDING: approve counts PENDING decisions across runs
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
     await srv._releaseBudget(request);
 

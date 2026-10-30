@@ -102,6 +102,31 @@ module.exports = async (srv) => {
     req.data.itemNumber = existing.length + 1;
   });
 
+  // ─── Live line/request totals while editing a draft ───────────────────────
+  srv.after("UPDATE", "RequestItems.drafts", async (_, req) => {
+    const { RequestItems, Requests } = srv.entities;
+    const { ID } = req.params.at(-1);
+    const item = await SELECT.one.from(RequestItems.drafts).where({ ID });
+    if (!item) return;
+
+    const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+    await UPDATE(RequestItems.drafts).set({ lineTotal }).where({ ID });
+
+    const items = await SELECT.from(RequestItems.drafts).columns("lineTotal").where({ request_ID: item.request_ID });
+    const totalAmount = items.reduce((sum, i) => sum + (parseFloat(i.lineTotal) || 0), 0);
+    await UPDATE(Requests.drafts).set({ totalAmount }).where({ ID: item.request_ID });
+  });
+
+
+  // ─── Lock submitted requests ───────────────────────────────────────────────
+  // Amount and cost center must stay what the budget reserved and the approvers saw.
+  srv.before(["EDIT", "SAVE", "DELETE"], "Requests", async (req) => {
+    const { ID } = req.params?.[0] ?? req.data;
+    const active = await SELECT.one.from(PurchaseRequest).columns("status").where({ ID });
+    if (active && active.status !== "DRAFT" && active.status !== "REJECTED") {
+      req.reject(400, `Cannot ${req.event === "DELETE" ? "delete" : "edit"} — current status is '${active.status}'`);
+    }
+  });
 
   // ─── submit ────────────────────────────────────────────────────────────────
   srv.on("submit", "Requests", async (req) => {
@@ -151,11 +176,12 @@ module.exports = async (srv) => {
 
     // ── Generate requestNumber only on first submission ──
     if (!request.requestNumber) {
+      // shortcut: two submits in the same instant can get the same number; add a DB sequence if that shows up.
       const year = new Date().getFullYear();
-      const existing = await SELECT.from(PurchaseRequest).where({
-        requestNumber: { "!=": null },
-      });
-      const seq = String(existing.length + 1).padStart(3, "0");
+      const { count } = await SELECT.one.from(PurchaseRequest)
+        .columns("count(1) as count")
+        .where({ requestNumber: { like: `PR-${year}-%` } });
+      const seq = String(count + 1).padStart(3, "0");
       const requestNumber = `PR-${year}-${seq}`;
 
       await UPDATE(PurchaseRequest)
@@ -244,16 +270,12 @@ module.exports = async (srv) => {
     const request = await SELECT.one.from(PurchaseRequest).where({ ID });
     if (!request) return req.error(404, `Request ${ID} not found`);
 
-    if (request.status !== "DRAFT" && request.status !== "SUBMITTED") {
+    // Only drafts can be cancelled, and a draft never holds a budget reservation.
+    if (request.status !== "DRAFT") {
       return req.error(
         400,
         `Cannot cancel — current status is '${request.status}'`
       );
-    }
-
-    // ── Release budget if it was reserved ──
-    if (request.budgetCheckStatus === "WITHIN") {
-      await releaseBudget(request);
     }
 
     await UPDATE(PurchaseRequest).set({ status: "CANCELLED" }).where({ ID });
@@ -294,20 +316,20 @@ module.exports = async (srv) => {
     await UPDATE(PurchaseRequest).set({ totalAmount }).where({ ID: requestId });
   });
 
-// ─── Populate isApprover virtual field ────────────────────────────────────
-srv.after("READ", "Requests", (data, req) => {
-  const isApprover =
-    req.user.is("Manager") ||
-    req.user.is("Finance") ||
-    req.user.is("FinanceDirector") ||
-    req.user.is("Admin");
+  srv.on("READ", "UserInfo", (req) => ({ hideCreate: !req.user.is("Requester") }));
 
-  const fill = (row) => {
-    if (row) row.isApprover = isApprover;
-  };
-
-  Array.isArray(data) ? data.forEach(fill) : fill(data);
-});
+  // ─── Populate isApprover virtual field ────────────────────────────────────
+  // True only when this user can act on an active step right now (drives Approve/Reject buttons).
+  srv.after("READ", "Requests", async (data, req) => {
+    const rows = (Array.isArray(data) ? data : [data]).filter((r) => r?.ID);
+    if (!rows.length) return;
+    const steps = await SELECT.from(ApprovalStep)
+      .columns("request_ID", "approverRole")
+      .where({ request_ID: { in: rows.map((r) => r.ID) }, stepStatus: "ACTIVE" });
+    for (const row of rows) {
+      row.isApprover = steps.some((s) => s.request_ID === row.ID && req.user.is(s.approverRole));
+    }
+  });
 
   // ─── Export budget helpers for use in approval-handler.js ─────────────────
   srv._releaseBudget = releaseBudget;

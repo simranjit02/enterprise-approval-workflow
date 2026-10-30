@@ -62,7 +62,8 @@
             "roles": [
               "Viewer"
             ]
-          }
+          },
+          "*": false
         }
       },
       "[production]": {
@@ -75,10 +76,7 @@
         "kind": "odata-v2",
         "model": "srv/external/S4HANA_SANDBOX",
         "credentials": {
-          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER",
-          "headers": {
-            "APIKey": "9mlUkwm4KC6eX8HQ5bi7ke7pXUmXZaDK"
-          }
+          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_BUSINESS_PARTNER"
         },
         "[production]": {
           "credentials": {
@@ -93,10 +91,7 @@
         "kind": "odata-v2",
         "model": "srv/external/API_PRODUCT_SRV",
         "credentials": {
-          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_PRODUCT_SRV",
-          "headers": {
-            "APIKey": "9mlUkwm4KC6eX8HQ5bi7ke7pXUmXZaDK"
-          }
+          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_PRODUCT_SRV"
         },
         "[production]": {
           "credentials": {
@@ -111,10 +106,7 @@
         "kind": "odata",
         "model": "srv/external/API_COSTCENTER_SRV",
         "credentials": {
-          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata4/sap/api_cost_center/srvd_a2x/sap/costcenter/0001",
-          "headers": {
-            "APIKey": "9mlUkwm4KC6eX8HQ5bi7ke7pXUmXZaDK"
-          }
+          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata4/sap/api_cost_center/srvd_a2x/sap/costcenter/0001"
         },
         "[production]": {
           "credentials": {

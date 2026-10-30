@@ -108,6 +108,18 @@
                     "route": "DepartmentBudgetsObject"
                   }
                 }
+              },
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "admin.ui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
+                    }
+                  }
+                }
               }
             }
           }
@@ -118,7 +130,19 @@
           "name": "sap.fe.templates.ObjectPage",
           "options": {
             "settings": {
-              "entitySet": "DepartmentBudgets"
+              "entitySet": "DepartmentBudgets",
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "admin.ui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -135,6 +159,18 @@
                     "route": "PurchaseRequestsObject"
                   }
                 }
+              },
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "admin.ui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
+                    }
+                  }
+                }
               }
             }
           }
@@ -145,7 +181,19 @@
           "name": "sap.fe.templates.ObjectPage",
           "options": {
             "settings": {
-              "entitySet": "PurchaseRequests"
+              "entitySet": "PurchaseRequests",
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "admin.ui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
+                    }
+                  }
+                }
+              }
             }
           }
         },
@@ -155,7 +203,19 @@
           "name": "sap.fe.templates.ListReport",
           "options": {
             "settings": {
-              "entitySet": "AuditLogs"
+              "entitySet": "AuditLogs",
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "admin.ui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
+                    }
+                  }
+                }
+              }
             }
           }
         }

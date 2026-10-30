@@ -8,24 +8,37 @@ using {API_COSTCENTER_SRV} from './external/API_COSTCENTER_SRV';
 
 @path: 'approval'
 service ApprovalService {
-    annotate ApprovalSteps with @restrict: [{
-        grant: ['READ'],
-        to   : [
-            'Manager',
-            'Finance',
-            'Admin'
-        ]
-    }];
+    annotate ApprovalSteps with @restrict: [
+        {
+            grant: ['READ'],
+            to   : ['Requester'],
+            where: 'request.createdBy = $user'
+        },
+        {
+            grant: ['READ'],
+            to   : [
+                'Manager',
+                'Finance',
+                'Admin'
+            ]
+        }
+    ];
 
-    annotate AuditLogs with @restrict: [{
-        grant: ['READ'],
-        to   : [
-            'Requester',
-            'Manager',
-            'Finance',
-            'Admin'
-        ]
-    }];
+    annotate AuditLogs with @restrict: [
+        {
+            grant: ['READ'],
+            to   : ['Requester'],
+            where: 'request.createdBy = $user'
+        },
+        {
+            grant: ['READ'],
+            to   : [
+                'Manager',
+                'Finance',
+                'Admin'
+            ]
+        }
+    ];
 
     annotate RequestItems with @restrict: [
         {
@@ -178,6 +191,14 @@ service ApprovalService {
             ItemCategoryGroup
         };
 
+    // Per-user UI flags; the UI can't know roles from static metadata.
+    @odata.singleton
+    @cds.persistence.skip
+    @readonly
+    entity UserInfo {
+        hideCreate : Boolean; // only Requesters can create requests
+    }
+
     // ─── Dropdown Value Help Entities ────────────────────────────────────────────
     @readonly
     entity PriorityValues   as projection on db.PriorityValue;
@@ -191,15 +212,6 @@ service ApprovalService {
     entity CurrencyValues   as projection on db.CurrencyValue;
     @readonly
     entity DepartmentBudget as projection on db.DepartmentBudget;
-
-    @restrict: [{
-        grant: ['WRITE'],
-        to   : ['Admin']
-    }]
-    action setMonthlyBudget(costCenter: String,
-                            fiscalYear: Integer,
-                            fiscalMonth: Integer,
-                            budgetAmount: Decimal) returns String;
 }
 
 annotate ApprovalService with @requires: ['authenticated-user'];
