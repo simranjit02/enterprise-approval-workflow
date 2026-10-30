@@ -62,6 +62,23 @@ describe('approve action', () => {
     expect(status).to.equal(403)
   })
 
+  it('Finance can approve first when both steps are active', async () => {
+    const { ApprovalStep } = cds.entities('com.enterprise.approval')
+    await INSERT.into(ApprovalStep).entries({
+      request_ID: REQUEST_ID,
+      stepNumber: 2,
+      approverRole: 'Finance',
+      approverUserId: 'Finance',
+      stepStatus: 'ACTIVE',
+      decision: 'PENDING'
+    })
+    const url = `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.approve`
+    const { data: afterFinance } = await POST(url, {}, FINANCE)
+    expect(afterFinance.status).to.equal('IN_APPROVAL')
+    const { data: afterManager } = await POST(url, {}, MANAGER)
+    expect(afterManager.status).to.equal('APPROVED')
+  })
+
   it('sad path: Finance cannot approve a Manager step', async () => {
     const { status } = await POST(
       `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.approve`,

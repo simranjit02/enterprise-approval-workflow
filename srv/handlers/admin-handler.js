@@ -14,18 +14,20 @@ module.exports = (srv) => {
             costCenter, fiscalYear, fiscalMonth
         })
 
+        const ID = existing?.ID ?? cds.utils.uuid()
         if (existing) {
+            // Keep reservedAmount: requests still in approval release or consume it later.
             await UPDATE(DepartmentBudgets)
                 .set({
                     monthlyAllocation: budgetAmount,
                     consumedAmount: 0,
-                    reservedAmount: 0,
-                    remainingAmount: budgetAmount,
+                    remainingAmount: Number(budgetAmount) - (Number(existing.reservedAmount) || 0),
                     lastResetAt: new Date().toISOString()
                 })
                 .where({ costCenter, fiscalYear, fiscalMonth })
         } else {
             await INSERT.into(DepartmentBudgets).entries({
+                ID,
                 costCenter,
                 fiscalYear,
                 fiscalMonth,
@@ -36,6 +38,16 @@ module.exports = (srv) => {
                 lastResetAt: new Date().toISOString()
             })
         }
+
+        const { AuditLog } = cds.entities('com.enterprise.approval')
+        await INSERT.into(AuditLog).entries({
+            entityName: 'DepartmentBudget',
+            entityId: ID,
+            action: existing ? 'BUDGET_RESET' : 'BUDGET_SET',
+            oldValue: existing ? String(existing.monthlyAllocation) : null,
+            newValue: String(budgetAmount),
+            performedBy: req.user.id
+        })
 
         return `Budget reset for ${costCenter} — ${fiscalYear}/${fiscalMonth}: ${budgetAmount}`
     })

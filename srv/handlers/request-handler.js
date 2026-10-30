@@ -103,6 +103,16 @@ module.exports = async (srv) => {
   });
 
 
+  // ─── Lock submitted requests ───────────────────────────────────────────────
+  // Amount and cost center must stay what the budget reserved and the approvers saw.
+  srv.before(["EDIT", "SAVE"], "Requests", async (req) => {
+    const { ID } = req.params?.[0] ?? req.data;
+    const active = await SELECT.one.from(PurchaseRequest).columns("status").where({ ID });
+    if (active && active.status !== "DRAFT" && active.status !== "REJECTED") {
+      req.reject(400, `Cannot edit — current status is '${active.status}'`);
+    }
+  });
+
   // ─── submit ────────────────────────────────────────────────────────────────
   srv.on("submit", "Requests", async (req) => {
     const { ID } = req.params[0];
@@ -151,11 +161,12 @@ module.exports = async (srv) => {
 
     // ── Generate requestNumber only on first submission ──
     if (!request.requestNumber) {
+      // shortcut: two submits in the same instant can get the same number; add a DB sequence if that shows up.
       const year = new Date().getFullYear();
-      const existing = await SELECT.from(PurchaseRequest).where({
-        requestNumber: { "!=": null },
-      });
-      const seq = String(existing.length + 1).padStart(3, "0");
+      const { count } = await SELECT.one.from(PurchaseRequest)
+        .columns("count(1) as count")
+        .where({ requestNumber: { like: `PR-${year}-%` } });
+      const seq = String(count + 1).padStart(3, "0");
       const requestNumber = `PR-${year}-${seq}`;
 
       await UPDATE(PurchaseRequest)
@@ -244,16 +255,12 @@ module.exports = async (srv) => {
     const request = await SELECT.one.from(PurchaseRequest).where({ ID });
     if (!request) return req.error(404, `Request ${ID} not found`);
 
-    if (request.status !== "DRAFT" && request.status !== "SUBMITTED") {
+    // Only drafts can be cancelled, and a draft never holds a budget reservation.
+    if (request.status !== "DRAFT") {
       return req.error(
         400,
         `Cannot cancel — current status is '${request.status}'`
       );
-    }
-
-    // ── Release budget if it was reserved ──
-    if (request.budgetCheckStatus === "WITHIN") {
-      await releaseBudget(request);
     }
 
     await UPDATE(PurchaseRequest).set({ status: "CANCELLED" }).where({ ID });
@@ -299,7 +306,6 @@ srv.after("READ", "Requests", (data, req) => {
   const isApprover =
     req.user.is("Manager") ||
     req.user.is("Finance") ||
-    req.user.is("FinanceDirector") ||
     req.user.is("Admin");
 
   const fill = (row) => {

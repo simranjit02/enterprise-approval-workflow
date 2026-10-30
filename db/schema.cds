@@ -126,6 +126,7 @@ type Decision          : String enum {
     PENDING;
     APPROVED;
     REJECTED;
+    SKIPPED;
 }
 
 type ExecutionStatus   : String enum {

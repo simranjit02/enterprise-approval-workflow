@@ -17,15 +17,21 @@ service ApprovalService {
         ]
     }];
 
-    annotate AuditLogs with @restrict: [{
-        grant: ['READ'],
-        to   : [
-            'Requester',
-            'Manager',
-            'Finance',
-            'Admin'
-        ]
-    }];
+    annotate AuditLogs with @restrict: [
+        {
+            grant: ['READ'],
+            to   : ['Requester'],
+            where: 'request.createdBy = $user'
+        },
+        {
+            grant: ['READ'],
+            to   : [
+                'Manager',
+                'Finance',
+                'Admin'
+            ]
+        }
+    ];
 
     annotate RequestItems with @restrict: [
         {
@@ -191,15 +197,6 @@ service ApprovalService {
     entity CurrencyValues   as projection on db.CurrencyValue;
     @readonly
     entity DepartmentBudget as projection on db.DepartmentBudget;
-
-    @restrict: [{
-        grant: ['WRITE'],
-        to   : ['Admin']
-    }]
-    action setMonthlyBudget(costCenter: String,
-                            fiscalYear: Integer,
-                            fiscalMonth: Integer,
-                            budgetAmount: Decimal) returns String;
 }
 
 annotate ApprovalService with @requires: ['authenticated-user'];

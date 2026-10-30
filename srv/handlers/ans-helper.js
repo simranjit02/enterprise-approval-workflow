@@ -7,7 +7,11 @@ async function getANSToken(credentials) {
     const response = await fetch(credentials.oauth_url, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `client_id=${credentials.client_id}&client_secret=${credentials.client_secret}`
+        body: new URLSearchParams({
+            grant_type: "client_credentials",
+            client_id: credentials.client_id,
+            client_secret: credentials.client_secret
+        })
     });
     const data = await response.json();
     return data.access_token;
