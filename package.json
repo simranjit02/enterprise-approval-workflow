@@ -62,7 +62,8 @@
             "roles": [
               "Viewer"
             ]
-          }
+          },
+          "*": false
         }
       },
       "[production]": {

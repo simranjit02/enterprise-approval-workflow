@@ -191,6 +191,14 @@ service ApprovalService {
             ItemCategoryGroup
         };
 
+    // Per-user UI flags; the UI can't know roles from static metadata.
+    @odata.singleton
+    @cds.persistence.skip
+    @readonly
+    entity UserInfo {
+        hideCreate : Boolean; // only Requesters can create requests
+    }
+
     // ─── Dropdown Value Help Entities ────────────────────────────────────────────
     @readonly
     entity PriorityValues   as projection on db.PriorityValue;

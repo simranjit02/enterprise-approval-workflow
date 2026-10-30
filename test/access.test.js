@@ -122,6 +122,12 @@ describe('access control', () => {
     expect(Number(data.totalAmount)).to.equal(75)
   })
 
+  it('Create is hidden for users who are not Requesters', async () => {
+    const MANAGER = { auth: { username: 'manager@company.com', password: 'manager' } }
+    expect((await GET(`/odata/v4/approval/UserInfo`, MANAGER)).data.hideCreate).to.equal(true)
+    expect((await GET(`/odata/v4/approval/UserInfo`, REQUESTER)).data.hideCreate).to.equal(false)
+  })
+
   it('non-admins cannot write DepartmentBudget', async () => {
     for (const user of [REQUESTER, VIEWER]) {
       const { status } = await PATCH(

@@ -316,6 +316,8 @@ module.exports = async (srv) => {
     await UPDATE(PurchaseRequest).set({ totalAmount }).where({ ID: requestId });
   });
 
+  srv.on("READ", "UserInfo", (req) => ({ hideCreate: !req.user.is("Requester") }));
+
   // ─── Populate isApprover virtual field ────────────────────────────────────
   // True only when this user can act on an active step right now (drives Approve/Reject buttons).
   srv.after("READ", "Requests", async (data, req) => {

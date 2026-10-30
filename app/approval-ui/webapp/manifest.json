@@ -132,6 +132,18 @@
                     "type": "ResponsiveTable"
                   }
                 }
+              },
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "approvalui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
+                    }
+                  }
+                }
               }
             }
           }
@@ -178,6 +190,18 @@
                       "afterExecution": {
                         "navigateToInstance": false
                       }
+                    }
+                  }
+                }
+              },
+              "content": {
+                "header": {
+                  "actions": {
+                    "logout": {
+                      "press": "approvalui.ext.Logout.logout",
+                      "text": "Log out",
+                      "visible": true,
+                      "enabled": true
                     }
                   }
                 }

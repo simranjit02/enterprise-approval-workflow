@@ -7,6 +7,7 @@ annotate service.Requests with @(
         priority,
         category
     ],
+    UI.CreateHidden               : {$edmJson: {$Path: '/UserInfo/hideCreate'}},
     UI.UpdateHidden               : {$edmJson: {$And: [
         {$Ne: [
             {$Path: 'status'},
