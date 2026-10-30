@@ -38,7 +38,7 @@ module.exports = async (srv) => {
     let newStatus = "IN_APPROVAL";
     if (!pendingSteps.length) {
       await UPDATE(PurchaseRequest).set({ status: "APPROVED", completedAt: new Date() }).where({ ID });
-      await srv._consumeBudget(request?.costCenter, request?.totalAmount);
+      await srv._consumeBudget(request);
       newStatus = "APPROVED";
     }
     await INSERT.into(AuditLog).entries({
@@ -88,7 +88,7 @@ module.exports = async (srv) => {
     await UPDATE(ApprovalStep)
       .set({ stepStatus: "SKIPPED", decision: "SKIPPED" })
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
-    await srv._releaseBudget(request?.costCenter, request?.totalAmount);
+    await srv._releaseBudget(request);
 
     await UPDATE(PurchaseRequest).set({ status: "REJECTED", completedAt: new Date() }).where({ ID });
     await INSERT.into(AuditLog).entries({
