@@ -70,13 +70,6 @@ annotate service.PurchaseRequests with @(
             { Value: vendorIndustry }
         ]
     },
-    UI.FieldGroup #AI: {
-        Label: 'AI Assessment',
-        Data: [
-            { Value: aiRiskLevel },
-            { Value: aiRiskSummary }
-        ]
-    },
     UI.FieldGroup #Timestamps: {
         Label: 'Timeline',
         Data: [
@@ -90,7 +83,6 @@ annotate service.PurchaseRequests with @(
         { $Type: 'UI.ReferenceFacet', Label: 'General',   Target: '@UI.FieldGroup#General' },
         { $Type: 'UI.ReferenceFacet', Label: 'Financial', Target: '@UI.FieldGroup#Financial' },
         { $Type: 'UI.ReferenceFacet', Label: 'Vendor',    Target: '@UI.FieldGroup#Vendor' },
-        { $Type: 'UI.ReferenceFacet', Label: 'AI Risk',   Target: '@UI.FieldGroup#AI' },
         { $Type: 'UI.ReferenceFacet', Label: 'Timeline',  Target: '@UI.FieldGroup#Timestamps' }
     ]
 );
@@ -103,6 +95,7 @@ annotate service.DepartmentBudgets with @(
         fiscalMonth
     ],
     UI.LineItem: [
+        { $Type: 'UI.DataFieldForAction', Action: 'AdminService.EntityContainer/resetMonthlyBudget', Label: 'Reset Budget' },
         { Value: costCenter,        Label: 'Cost Center' },
         { Value: fiscalYear,        Label: 'Year' },
         { Value: fiscalMonth,       Label: 'Month' },
@@ -131,7 +124,7 @@ annotate service.DepartmentBudgets with @(
         Label: 'Budget Details',
         Data: [
             { Value: costCenter, Label: 'Cost Center' },
-            { Value: fiscalYear, @Common.TextFormat : #Plain, Label: 'Year'  },
+            { Value: fiscalYear, @Common.TextFormat : #plain, Label: 'Year'  },
             { Value: fiscalMonth, Label: 'Month' },
             { Value: monthlyAllocation, Label: 'Monthly Budget' },
             { Value: totalAnnualBudget, Label: 'Total Annual Budget' }
@@ -155,11 +148,9 @@ annotate service.DepartmentBudgets with @(
         TypeName: 'Department Budget',
         TypeNamePlural: 'Department Budgets',
         Title: { Value: costCenter },
-        Description: { Value: fiscalYear },   
-        Common.SemanticKey: [costCenter, fiscalYear, fiscalMonth]
-
-
-    }
+        Description: { Value: fiscalYear }
+    },
+    Common.SemanticKey: [costCenter, fiscalYear, fiscalMonth]
 );
 
 // ─── Audit Logs List Report ───────────────────────────────────────────────────

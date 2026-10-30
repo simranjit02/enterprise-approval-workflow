@@ -1,5 +1,5 @@
 const cds = require('@sap/cds')
-const { POST, expect } = cds.test(__dirname + '/..')
+const { GET, POST, expect } = cds.test(__dirname + '/..')
 
 const REQUESTER = { auth: { username: 'requester@company.com', password: 'requester' } }
 const MANAGER   = { auth: { username: 'manager@company.com',   password: 'manager'   } }
@@ -75,6 +75,8 @@ describe('approve action', () => {
     const url = `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.approve`
     const { data: afterFinance } = await POST(url, {}, FINANCE)
     expect(afterFinance.status).to.equal('IN_APPROVAL')
+    const { data: forFinance } = await GET(`/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)`, FINANCE)
+    expect(forFinance.isApprover).to.equal(false)
     const { data: afterManager } = await POST(url, {}, MANAGER)
     expect(afterManager.status).to.equal('APPROVED')
   })

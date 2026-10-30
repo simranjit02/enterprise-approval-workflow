@@ -3,6 +3,21 @@ const cds = require('@sap/cds')
 module.exports = (srv) => {
     const { DepartmentBudgets } = srv.entities
 
+    // Draft copies consumed/reserved when opened; take them from the live row so
+    // reservations made meanwhile aren't overwritten, and derive remaining from them.
+    srv.before('SAVE', 'DepartmentBudgets', async (req) => {
+        const live = await SELECT.one.from(DepartmentBudgets)
+            .columns('consumedAmount', 'reservedAmount')
+            .where({ ID: req.data.ID })
+        const consumedAmount = Number(live?.consumedAmount) || 0
+        const reservedAmount = Number(live?.reservedAmount) || 0
+        Object.assign(req.data, {
+            consumedAmount,
+            reservedAmount,
+            remainingAmount: (Number(req.data.monthlyAllocation) || 0) - consumedAmount - reservedAmount
+        })
+    })
+
     srv.on('resetMonthlyBudget', async (req) => {
         const { costCenter, fiscalYear, fiscalMonth, budgetAmount } = req.data
 

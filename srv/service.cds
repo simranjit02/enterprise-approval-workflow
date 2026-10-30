@@ -8,14 +8,21 @@ using {API_COSTCENTER_SRV} from './external/API_COSTCENTER_SRV';
 
 @path: 'approval'
 service ApprovalService {
-    annotate ApprovalSteps with @restrict: [{
-        grant: ['READ'],
-        to   : [
-            'Manager',
-            'Finance',
-            'Admin'
-        ]
-    }];
+    annotate ApprovalSteps with @restrict: [
+        {
+            grant: ['READ'],
+            to   : ['Requester'],
+            where: 'request.createdBy = $user'
+        },
+        {
+            grant: ['READ'],
+            to   : [
+                'Manager',
+                'Finance',
+                'Admin'
+            ]
+        }
+    ];
 
     annotate AuditLogs with @restrict: [
         {
