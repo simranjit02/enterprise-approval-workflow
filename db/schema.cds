@@ -22,6 +22,8 @@ entity PurchaseRequest : cuid, managed {
     totalAmount           : Decimal(15, 2);
     currency              : String(5);
     budgetCheckStatus     : BudgetCheckStatus;
+    budgetFiscalYear      : Integer; // period the budget was reserved in
+    budgetFiscalMonth     : Integer;
     aiRiskLevel           : AIRiskLevel;
     aiRiskSummary         : LargeString;
     status                : Status default 'DRAFT';

@@ -16,90 +16,76 @@ module.exports = async (srv) => {
 
   /**
    * reserveBudget — called on submit.
-   * Checks DepartmentBudget for current month. If enough → reserves amount.
-   * Returns "WITHIN" or throws if not configured / exceeded.
+   * Reserves amount in the current month's DepartmentBudget in one atomic UPDATE,
+   * so concurrent submits cannot both pass the check.
+   * Returns the reserved period or throws if not configured / exceeded.
    */
   const reserveBudget = async (costCenter, costCenterName, amount) => {
     const currentDate = new Date();
     const fiscalYear = currentDate.getFullYear();
     const fiscalMonth = currentDate.getMonth() + 1;
+    const amt = parseFloat(amount) || 0;
 
-    const budget = await SELECT.one.from(DepartmentBudget).where({
-      costCenter,
-      fiscalYear,
-      fiscalMonth,
-    });
-
-    if (!budget) {
-      throw new Error(
-        `Budget not configured for cost center: ${costCenterName} (${costCenter})`
-      );
-    }
-
-    if (parseFloat(budget.remainingAmount) < parseFloat(amount)) {
-      throw new Error(
-        `Insufficient budget for ${costCenterName} — requested: ${amount}, remaining: ${budget.remainingAmount}`
-      );
-    }
-
-    await UPDATE(DepartmentBudget)
+    const reserved = await UPDATE(DepartmentBudget)
       .set({
-        reservedAmount: parseFloat(budget.reservedAmount) + parseFloat(amount),
-        remainingAmount: parseFloat(budget.remainingAmount) - parseFloat(amount),
+        reservedAmount: { "+=": amt },
+        remainingAmount: { "-=": amt },
       })
-      .where({ costCenter, fiscalYear, fiscalMonth });
+      .where({ costCenter, fiscalYear, fiscalMonth, remainingAmount: { ">=": amt } });
 
-    return "WITHIN";
+    if (!reserved) {
+      const budget = await SELECT.one.from(DepartmentBudget).where({
+        costCenter,
+        fiscalYear,
+        fiscalMonth,
+      });
+      throw new Error(
+        budget
+          ? `Insufficient budget for ${costCenterName} — requested: ${amount}, remaining: ${budget.remainingAmount}`
+          : `Budget not configured for cost center: ${costCenterName} (${costCenter})`
+      );
+    }
+
+    return { fiscalYear, fiscalMonth };
+  };
+
+  // Budget row the request reserved against; requests submitted before the
+  // period was stored fall back to the current month (old behaviour).
+  const budgetPeriod = (request) => {
+    const now = new Date();
+    return {
+      costCenter: request.costCenter,
+      fiscalYear: request.budgetFiscalYear ?? now.getFullYear(),
+      fiscalMonth: request.budgetFiscalMonth ?? now.getMonth() + 1,
+    };
   };
 
   /**
    * releaseBudget — called on cancel and reject.
    * Moves amount back from reserved → remaining.
    */
-  const releaseBudget = async (costCenter, amount) => {
-    const currentDate = new Date();
-    const fiscalYear = currentDate.getFullYear();
-    const fiscalMonth = currentDate.getMonth() + 1;
-
-    const budget = await SELECT.one.from(DepartmentBudget).where({
-      costCenter,
-      fiscalYear,
-      fiscalMonth,
-    });
-
-    if (!budget) return; // nothing to release if no record
-
+  const releaseBudget = async (request) => {
+    const amt = parseFloat(request.totalAmount) || 0;
     await UPDATE(DepartmentBudget)
       .set({
-        reservedAmount: Math.max(0, parseFloat(budget.reservedAmount) - parseFloat(amount)),
-        remainingAmount: parseFloat(budget.remainingAmount) + parseFloat(amount),
+        reservedAmount: { "-=": amt },
+        remainingAmount: { "+=": amt },
       })
-      .where({ costCenter, fiscalYear, fiscalMonth });
+      .where(budgetPeriod(request));
   };
 
   /**
    * consumeBudget — called on final approve.
    * Moves amount from reserved → consumed.
    */
-  const consumeBudget = async (costCenter, amount) => {
-    const currentDate = new Date();
-    const fiscalYear = currentDate.getFullYear();
-    const fiscalMonth = currentDate.getMonth() + 1;
-
-    const budget = await SELECT.one.from(DepartmentBudget).where({
-      costCenter,
-      fiscalYear,
-      fiscalMonth,
-    });
-
-    if (!budget) return;
-
+  const consumeBudget = async (request) => {
+    const amt = parseFloat(request.totalAmount) || 0;
     await UPDATE(DepartmentBudget)
       .set({
-        reservedAmount: Math.max(0, parseFloat(budget.reservedAmount) - parseFloat(amount)),
-        consumedAmount: parseFloat(budget.consumedAmount) + parseFloat(amount),
+        reservedAmount: { "-=": amt },
+        consumedAmount: { "+=": amt },
       })
-      .where({ costCenter, fiscalYear, fiscalMonth });
+      .where(budgetPeriod(request));
   };
 
 
@@ -143,14 +129,18 @@ module.exports = async (srv) => {
 
     // ── Budget check ──
     try {
-      const budgetStatus = await reserveBudget(
+      const { fiscalYear, fiscalMonth } = await reserveBudget(
         request.costCenter,
         request.costCenterName,
         request.totalAmount
       );
 
       await UPDATE(PurchaseRequest)
-        .set({ budgetCheckStatus: budgetStatus })
+        .set({
+          budgetCheckStatus: "WITHIN",
+          budgetFiscalYear: fiscalYear,
+          budgetFiscalMonth: fiscalMonth,
+        })
         .where({ ID });
     } catch (e) {
       await UPDATE(PurchaseRequest)
@@ -263,7 +253,7 @@ module.exports = async (srv) => {
 
     // ── Release budget if it was reserved ──
     if (request.budgetCheckStatus === "WITHIN") {
-      await releaseBudget(request.costCenter, request.totalAmount);
+      await releaseBudget(request);
     }
 
     await UPDATE(PurchaseRequest).set({ status: "CANCELLED" }).where({ ID });

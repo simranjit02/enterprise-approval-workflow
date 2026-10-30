@@ -34,7 +34,8 @@ service ApprovalService {
                 'READ',
                 'WRITE'
             ],
-            to   : ['Requester']
+            to   : ['Requester'],
+            where: 'createdBy = $user'
         },
         {
             grant: ['READ'],
@@ -53,7 +54,18 @@ service ApprovalService {
                 'READ',
                 'WRITE'
             ],
-            to   : ['Requester']
+            to   : ['Requester'],
+            where: 'createdBy = $user'
+        },
+        {
+            // bound-action instance checks only work here, not on the action itself
+            grant: [
+                'submit',
+                'cancel',
+                'validateCostCenter'
+            ],
+            to   : ['Requester'],
+            where: 'createdBy = $user'
         },
         {
             grant: ['READ'],
@@ -68,10 +80,6 @@ service ApprovalService {
     @odata.draft.enabled
     entity Requests         as projection on db.PurchaseRequest
         actions {
-            @restrict: [{
-                grant: ['WRITE'],
-                to   : ['Requester']
-            }]
             action submit()                returns Requests;
 
             @restrict: [{
@@ -82,10 +90,6 @@ service ApprovalService {
                 ]
             }]
             action approve()               returns Requests;
-            @restrict: [{
-                grant: ['WRITE'],
-                to   : ['Requester']
-            }]
             action cancel()                returns Requests;
             @restrict: [{
                 grant: ['WRITE'],
@@ -105,10 +109,6 @@ service ApprovalService {
             }]
             action validateVendor()        returns Requests;
 
-            @restrict: [{
-                grant: ['WRITE'],
-                to   : ['Requester']
-            }]
             action validateCostCenter()    returns Requests;
 
             @restrict: [{
@@ -179,11 +179,17 @@ service ApprovalService {
         };
 
     // ─── Dropdown Value Help Entities ────────────────────────────────────────────
+    @readonly
     entity PriorityValues   as projection on db.PriorityValue;
+    @readonly
     entity CategoryValues   as projection on db.CategoryValue;
+    @readonly
     entity CountryValues    as projection on db.CountryValue;
+    @readonly
     entity IndustryValues   as projection on db.IndustryValue;
+    @readonly
     entity CurrencyValues   as projection on db.CurrencyValue;
+    @readonly
     entity DepartmentBudget as projection on db.DepartmentBudget;
 
     @restrict: [{
@@ -197,3 +203,8 @@ service ApprovalService {
 }
 
 annotate ApprovalService with @requires: ['authenticated-user'];
+
+annotate ApprovalService.Requests with {
+    budgetFiscalYear  @readonly;
+    budgetFiscalMonth @readonly;
+};
