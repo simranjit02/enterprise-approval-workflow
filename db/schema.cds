@@ -11,12 +11,12 @@ entity PurchaseRequest : cuid, managed {
     vendorId              : String(20);
     vendorName            : String(200);
     vendorCountry         : String(3);
-    vendorIndustry        : String(100);
     priority              : Priority default 'MEDIUM';
     category              : RequestCategory;
     department            : String(100);
     costCenter            : String(20);
     costCenterName        : String(50);
+    costCenterCurrency    : String(5); // budget currency, from S/4 when the cost center is picked
     justification         : String(1000);
     requestedDeliveryDate : Date;
     totalAmount           : Decimal(15, 2);
@@ -24,20 +24,18 @@ entity PurchaseRequest : cuid, managed {
     budgetCheckStatus     : BudgetCheckStatus;
     budgetFiscalYear      : Integer; // period the budget was reserved in
     budgetFiscalMonth     : Integer;
-    aiRiskLevel           : AIRiskLevel;
-    aiRiskSummary         : LargeString;
     status                : Status default 'DRAFT';
     submittedAt           : Timestamp;
     completedAt           : Timestamp;
     virtual isApprover    : Boolean;
+    virtual isOwner       : Boolean; // current user created it
+    virtual hideEdit      : Boolean; // not owner, or no longer DRAFT/REJECTED
     items                 : Composition of many RequestItem
                                 on items.request = $self;
     steps                 : Composition of many ApprovalStep
                                 on steps.request = $self;
     workflows             : Association to many WorkflowInstance
                                 on workflows.request = $self;
-    executionLogs         : Association to many BusinessExecutionLog
-                                on executionLogs.request = $self;
     auditLogs             : Association to many AuditLog
                                 on auditLogs.request = $self;
 }
@@ -69,6 +67,7 @@ entity DepartmentBudget : cuid, managed {
 entity ApprovalStep : cuid, managed {
     request        : Association to one PurchaseRequest not null;
     stepNumber     : Integer not null;
+    runNumber      : Integer; // which submission created the step
     approverUserId : String(100) not null;
     approverRole   : String(50) not null;
     stepStatus     : StepStatus not null default 'PENDING';
@@ -84,19 +83,6 @@ entity WorkflowInstance : cuid, managed {
     status             : WorkflowStatus not null;
     startedAt          : Timestamp;
     completedAt        : Timestamp;
-    escalated          : Boolean default false;
-    escalationCount    : Integer default 0;
-}
-
-entity BusinessExecutionLog : cuid, managed {
-    request        : Association to one PurchaseRequest not null;
-    attemptNumber  : Integer not null;
-    status         : ExecutionStatus not null;
-    errorMessage   : String(1000);
-    responseBody   : LargeString;
-    executedAt     : Timestamp;
-    durationMs     : Integer;
-    isFinalAttempt : Boolean default false;
 }
 
 entity AuditLog : cuid, managed {
@@ -107,13 +93,6 @@ entity AuditLog : cuid, managed {
     oldValue    : LargeString;
     newValue    : LargeString;
     performedBy : String(100);
-}
-
-type AIRiskLevel       : String enum {
-    LOW;
-    MEDIUM;
-    HIGH;
-    CRITICAL;
 }
 
 type BudgetCheckStatus : String enum {
@@ -127,12 +106,6 @@ type Decision          : String enum {
     APPROVED;
     REJECTED;
     SKIPPED;
-}
-
-type ExecutionStatus   : String enum {
-    PENDING;
-    SUCCESS;
-    FAILED;
 }
 
 type Priority          : String enum {
@@ -195,11 +168,8 @@ entity CountryValue {
         label : String(100);
 }
 
-entity IndustryValue {
-    key code  : String(50);
-        label : String(100);
-}
 entity CurrencyValue {
-    key code : String(3);
-        name : String(50);
+    key code         : String(3);
+        name         : String(50);
+        financeLimit : Decimal(15, 2); // above this amount Finance must approve too; empty = always
 }

@@ -3,5 +3,9 @@
   "src/gen/**/*.hdbindex",
   "src/gen/**/*.hdbconstraint",
   "src/gen/**/*_drafts.hdbtable",
-  "src/gen/**/*.hdbcalculationview"
+  "src/gen/**/*.hdbcalculationview",
+  "src/gen/com.enterprise.approval.BusinessExecutionLog.hdbtable",
+  "src/gen/com.enterprise.approval.IndustryValue.hdbtable",
+  "src/gen/data/com.enterprise.approval-IndustryValue.csv",
+  "src/gen/data/com.enterprise.approval-IndustryValue.hdbtabledata"
 ]

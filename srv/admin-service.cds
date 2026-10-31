@@ -26,3 +26,10 @@ service AdminService {
         budgetAmount: Decimal
     ) returns String;
 }
+
+annotate AdminService.DepartmentBudgets with {
+    costCenter        @mandatory;
+    fiscalYear        @mandatory  @assert.range: [2000, 2100];
+    fiscalMonth       @mandatory  @assert.range: [1, 12];
+    monthlyAllocation @mandatory;
+};

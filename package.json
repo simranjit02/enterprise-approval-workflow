@@ -102,6 +102,20 @@
         "csrf": true,
         "csrfInBatch": true
       },
+      "API_INFORECORD_PROCESS_SRV": {
+        "kind": "odata-v2",
+        "credentials": {
+          "url": "https://sandbox.api.sap.com/s4hanacloud/sap/opu/odata/sap/API_INFORECORD_PROCESS_SRV"
+        },
+        "[production]": {
+          "credentials": {
+            "destination": "API_INFORECORD_PROCESS_SRV",
+            "path": "/s4hanacloud/sap/opu/odata/sap/API_INFORECORD_PROCESS_SRV"
+          }
+        },
+        "csrf": true,
+        "csrfInBatch": true
+      },
       "API_COSTCENTER_SRV": {
         "kind": "odata",
         "model": "srv/external/API_COSTCENTER_SRV",

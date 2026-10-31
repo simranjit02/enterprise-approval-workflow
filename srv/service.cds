@@ -74,8 +74,7 @@ service ApprovalService {
             // bound-action instance checks only work here, not on the action itself
             grant: [
                 'submit',
-                'cancel',
-                'validateCostCenter'
+                'cancel'
             ],
             to   : ['Requester'],
             where: 'createdBy = $user'
@@ -111,18 +110,7 @@ service ApprovalService {
                     'Finance'
                 ]
             }]
-            action reject(comment: String) returns Requests;
-
-            @restrict: [{
-                grant: ['WRITE'],
-                to   : [
-                    'Manager',
-                    'Finance'
-                ]
-            }]
-            action validateVendor()        returns Requests;
-
-            action validateCostCenter()    returns Requests;
+            action reject(comment: String @mandatory) returns Requests;
 
             @restrict: [{
                 grant: ['READ'],
@@ -137,58 +125,50 @@ service ApprovalService {
 
     entity RequestItems     as projection on db.RequestItem
                                order by
-                                   itemNumber asc
-        actions {
-            @restrict: [{
-                grant: ['WRITE'],
-                to   : ['Requester']
-            }]
-            action validateProduct() returns RequestItems;
-        };
+                                   itemNumber asc;
 
 
+    // Written only by submit/approve/reject; read-only even inside a request's draft.
+    @readonly
     entity ApprovalSteps    as projection on db.ApprovalStep
                                order by
                                    stepNumber asc;
 
     entity AuditLogs        as projection on db.AuditLog;
 
+    // Vendors are suppliers, not all business partners (those include customers).
     @cds.autoexpose
     @readonly
     entity VendorHelp       as
-        projection on S4HANA_SANDBOX.A_BusinessPartner {
-            key BusinessPartner         as vendorId,
-                BusinessPartnerFullName as vendorName
+        projection on S4HANA_SANDBOX.A_Supplier {
+            key Supplier     as vendorId,
+                SupplierName as vendorName,
+                PurchasingIsBlocked,
+                DeletionIndicator
         };
 
     @cds.autoexpose
     @readonly
     entity ProductHelp      as
-        projection on API_PRODUCT_SRV.A_Product {
-            key Product  as productId,
-                BaseUnit as baseUnit
+        projection on API_PRODUCT_SRV.A_ProductDescription {
+            key Product            as productId,
+                ProductDescription as productName,
+                Language
         };
 
+    // Validity (today) and blocked filters are added in the READ handler.
     @cds.autoexpose
     @readonly
     entity CostCenterHelp   as
         projection on API_COSTCENTER_SRV.A_CostCenter_2 {
-            key CostCenter     as costCenterId,
-                ControllingArea,
-                CostCenterName as costCenterName,
-                CompanyCode
-        };
-
-    @cds.redirection.target
-    entity A_Product        as
-        projection on API_PRODUCT_SRV.A_Product {
-            Product,
-            ProductType,
-            GrossWeight,
-            WeightUnit,
-            NetWeight,
-            CountryOfOrigin,
-            ItemCategoryGroup
+            key CostCenter         as costCenterId,
+            key ControllingArea,
+            key ValidityEndDate,
+                ValidityStartDate,
+                CostCenterName     as costCenterName,
+                CompanyCode,
+                CostCenterCurrency as currency,
+                IsBlockedForCommitmentPosting
         };
 
     // Per-user UI flags; the UI can't know roles from static metadata.
@@ -207,8 +187,6 @@ service ApprovalService {
     @readonly
     entity CountryValues    as projection on db.CountryValue;
     @readonly
-    entity IndustryValues   as projection on db.IndustryValue;
-    @readonly
     entity CurrencyValues   as projection on db.CurrencyValue;
     @readonly
     entity DepartmentBudget as projection on db.DepartmentBudget;
@@ -217,6 +195,20 @@ service ApprovalService {
 annotate ApprovalService with @requires: ['authenticated-user'];
 
 annotate ApprovalService.Requests with {
-    budgetFiscalYear  @readonly;
-    budgetFiscalMonth @readonly;
+    budgetFiscalYear   @readonly;
+    budgetFiscalMonth  @readonly;
+    costCenterCurrency @readonly;
+    title             @mandatory;
+    category          @mandatory;
+    priority          @mandatory;
+    justification     @mandatory;
+    currency          @mandatory;
+    costCenter        @mandatory;
+};
+
+annotate ApprovalService.RequestItems with {
+    productName @mandatory;
+    unit        @mandatory;
+    quantity    @mandatory;
+    unitPrice   @mandatory;
 };

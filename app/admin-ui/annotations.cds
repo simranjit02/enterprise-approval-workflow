@@ -66,8 +66,7 @@ annotate service.PurchaseRequests with @(
         Data: [
             { Value: vendorId },
             { Value: vendorName },
-            { Value: vendorCountry },
-            { Value: vendorIndustry }
+            { Value: vendorCountry }
         ]
     },
     UI.FieldGroup #Timestamps: {

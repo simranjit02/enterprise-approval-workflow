@@ -8,26 +8,14 @@ annotate service.Requests with @(
         category
     ],
     UI.CreateHidden               : {$edmJson: {$Path: '/UserInfo/hideCreate'}},
-    UI.UpdateHidden               : {$edmJson: {$And: [
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'DRAFT'}
-        ]},
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'REJECTED'}
-        ]}
-    ]}},
-    UI.DeleteHidden               : {$edmJson: {$And: [
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'DRAFT'}
-        ]},
-        {$Ne: [
-            {$Path: 'status'},
-            {$String: 'REJECTED'}
-        ]}
-    ]}},
+    Capabilities.NavigationRestrictions: {RestrictedProperties: [{
+        NavigationProperty: steps,
+        InsertRestrictions: {Insertable: false},
+        UpdateRestrictions: {Updatable: false},
+        DeleteRestrictions: {Deletable: false}
+    }]},
+    UI.UpdateHidden               : {$edmJson: {$Path: 'hideEdit'}},
+    UI.DeleteHidden               : {$edmJson: {$Path: 'hideEdit'}},
     UI.HeaderInfo                 : {
         TypeName      : 'Purchase Request',
         TypeNamePlural: 'Purchase Requests',
@@ -124,6 +112,10 @@ annotate service.Requests with @(
                     {$Path: 'IsActiveEntity'},
                     {$Bool: false}
                 ]},
+                {$Ne: [
+                    {$Path: 'isOwner'},
+                    {$Bool: true}
+                ]},
                 {$And: [
                     {$Ne: [
                         {$Path: 'status'},
@@ -190,6 +182,10 @@ annotate service.Requests with @(
                     {$Bool: false}
                 ]},
                 {$Ne: [
+                    {$Path: 'isOwner'},
+                    {$Bool: true}
+                ]},
+                {$Ne: [
                     {$Path: 'status'},
                     {$String: 'DRAFT'}
                 ]}
@@ -253,6 +249,11 @@ annotate service.Requests with @(
             ID    : 'ApprovalStepsFacet',
             Label : 'Approval Steps',
             Target: 'steps/@UI.LineItem',
+            // DRAFT = never submitted, so there are no steps yet
+            ![@UI.Hidden]: {$edmJson: {$Eq: [
+                {$Path: 'status'},
+                {$String: 'DRAFT'}
+            ]}},
         },
     ],
 
@@ -311,12 +312,6 @@ annotate service.Requests with @(
                 Value: vendorCountry,
                 @UI.Hidden,
             },
-            {
-                $Type: 'UI.DataField',
-                Label: 'Industry',
-                Value: vendorIndustry,
-                @UI.Hidden,
-            },
         ],
     },
 
@@ -332,6 +327,11 @@ annotate service.Requests with @(
                 $Type: 'UI.DataField',
                 Value: costCenterName,
                 Label: 'Cost Center Name',
+            },
+            {
+                $Type: 'UI.DataField',
+                Value: costCenterCurrency,
+                Label: 'Budget Currency',
             },
             {
                 $Type : 'UI.DataFieldForAction',
@@ -398,8 +398,6 @@ annotate service.Requests with {
     requestNumber     @Common.FieldControl: #ReadOnly;
     status            @Common.FieldControl: #ReadOnly;
     budgetCheckStatus @Common.FieldControl: #ReadOnly;
-    aiRiskLevel       @Common.FieldControl: #ReadOnly;
-    aiRiskSummary     @Common.FieldControl: #ReadOnly;
     submittedAt       @Common.FieldControl: #ReadOnly;
     completedAt       @Common.FieldControl: #ReadOnly;
     totalAmount       @Common.FieldControl: #ReadOnly;
@@ -410,6 +408,9 @@ annotate service.Requests with {
 annotate service.Requests with actions {
     submit  @(Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/requestNumber',
             'in/submittedAt',
@@ -419,6 +420,9 @@ annotate service.Requests with actions {
     });
     approve @(Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/completedAt'
         ],
@@ -426,19 +430,61 @@ annotate service.Requests with actions {
     });
     reject  @(Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/completedAt'
         ],
         TargetEntities  : [in.steps],
     });
-    cancel  @(Common.SideEffects: {
+    cancel  @(Common.IsActionCritical: true, Common.SideEffects: {
         TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
             'in/status',
             'in/completedAt'
         ],
         TargetEntities  : [in.steps],
     });
 };
+
+// Filled from S/4HANA when vendor / cost center / product is picked (validation-handler.js)
+annotate service.Requests with @(
+    Common.SideEffects #VendorChange    : {
+        SourceProperties: [vendorId],
+        TargetProperties: [
+            'vendorName',
+            'vendorCountry',
+            'currency',
+            'totalAmount'
+        ],
+        TargetEntities  : [items],
+    },
+    Common.SideEffects #CostCenterChange: {
+        SourceProperties: [costCenter],
+        TargetProperties: [
+            'costCenterName',
+            'costCenterCurrency',
+            'currency',
+            'totalAmount'
+        ],
+        TargetEntities  : [items],
+    },
+);
+
+annotate service.RequestItems with @(Common.SideEffects #ProductChange: {
+    SourceProperties: [productId],
+    TargetProperties: [
+        'productName',
+        'productCategory',
+        'unit',
+        'unitPrice',
+        'lineTotal'
+    ],
+    TargetEntities  : [request],
+});
 
 // ─── RequestItems: SideEffects + LineItem ─────────────────────────────────────
 
@@ -603,6 +649,10 @@ annotate service.Requests with {
                     $Type            : 'Common.ValueListParameterDisplayOnly',
                     ValueListProperty: 'CompanyCode',
                 },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'currency',
+                },
             ],
         },
         Common.ValueListWithFixedValues: false,
@@ -638,8 +688,8 @@ annotate service.RequestItems with {
                 },
                 {
                     $Type            : 'Common.ValueListParameterOut',
-                    LocalDataProperty: unit,
-                    ValueListProperty: 'baseUnit',
+                    LocalDataProperty: productName,
+                    ValueListProperty: 'productName',
                 },
             ],
         },
@@ -701,21 +751,29 @@ annotate service.Requests with {
             }],
         },
     );
-    vendorIndustry @(
-        Common.ValueListWithFixedValues: true,
-        Common.ValueList               : {
-            CollectionPath: 'IndustryValues',
-            Parameters    : [{
-                $Type            : 'Common.ValueListParameterOut',
-                LocalDataProperty: vendorIndustry,
-                ValueListProperty: 'code',
-            }],
-        },
-    );
 };
 
 // ─── Measures ────────────────────────────────────────────────────────────────
 
 annotate service.Requests with {
     totalAmount @Measures.ISOCurrency: currency;
+};
+
+// ─── Value help column titles ─────────────────────────────────────────────────
+
+annotate service.VendorHelp with {
+    vendorId   @title: 'Vendor ID';
+    vendorName @title: 'Vendor Name';
+};
+
+annotate service.ProductHelp with {
+    productId   @title: 'Product ID';
+    productName @title: 'Product Name';
+};
+
+annotate service.CostCenterHelp with {
+    costCenterId   @title: 'Cost Center';
+    costCenterName @title: 'Cost Center Name';
+    CompanyCode    @title: 'Company Code';
+    currency       @title: 'Currency';
 };

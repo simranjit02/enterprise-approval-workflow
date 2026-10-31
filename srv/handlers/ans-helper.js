@@ -6,6 +6,7 @@ async function getANSCredentials() {
 async function getANSToken(credentials) {
     const response = await fetch(credentials.oauth_url, {
         method: "POST",
+        signal: AbortSignal.timeout(5000),
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
             grant_type: "client_credentials",
@@ -17,17 +18,18 @@ async function getANSToken(credentials) {
     return data.access_token;
 }
 
+// Runs after commit and nobody awaits it, so it must never throw.
 async function sendAlert({ eventType, severity = "INFO", subject, body }) {
-    const credentials = await getANSCredentials();
-    if (!credentials) {
-        console.warn("[ANS] Not bound — skipping alert:", eventType);
-        return;
-    }
-
     try {
+        const credentials = await getANSCredentials();
+        if (!credentials) {
+            console.warn("[ANS] Not bound — skipping alert:", eventType);
+            return;
+        }
         const token = await getANSToken(credentials);
         await fetch(`${credentials.url}/cf/producer/v1/resource-events`, {
             method: "POST",
+            signal: AbortSignal.timeout(5000),
             headers: {
                 "Authorization": `Bearer ${token}`,
                 "Content-Type": "application/json"

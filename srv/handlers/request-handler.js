@@ -10,6 +10,7 @@ module.exports = async (srv) => {
     WorkflowInstance,
     RequestItem,
     DepartmentBudget,
+    CurrencyValue,
   } = cds.entities("com.enterprise.approval");
 
   // ─── Budget Helper Functions ───────────────────────────────────────────────
@@ -21,7 +22,7 @@ module.exports = async (srv) => {
    * Returns the reserved period or throws if not configured / exceeded.
    */
   const reserveBudget = async (costCenter, costCenterName, amount) => {
-    const currentDate = new Date();
+    const currentDate = new Date(); // local month; the server's TZ is the company time zone (mta.yaml)
     const fiscalYear = currentDate.getFullYear();
     const fiscalMonth = currentDate.getMonth() + 1;
     const amt = parseFloat(amount) || 0;
@@ -94,29 +95,47 @@ module.exports = async (srv) => {
     const { request_ID } = req.data;
     if (!request_ID) return;
 
-    const { RequestItems } = srv.entities;
-    const existing = await SELECT.from(RequestItems.drafts).where({
-      request_ID,
-    });
-
-    req.data.itemNumber = existing.length + 1;
+    // max + 1, not count + 1: after a delete, count + 1 repeats a number
+    const { max } = await SELECT.one.from(srv.entities.RequestItems.drafts)
+      .columns("max(itemNumber) as max").where({ request_ID });
+    req.data.itemNumber = (max ?? 0) + 1;
   });
 
-  // ─── Live line/request totals while editing a draft ───────────────────────
+  // ─── Line totals and request total ─────────────────────────────────────────
+  // Live on drafts while editing, and on the saved request after activation.
+  const recalcTotals = async (request_ID, Items, Request) => {
+    const items = await SELECT.from(Items).columns("ID", "quantity", "unitPrice").where({ request_ID });
+    let totalAmount = 0;
+    for (const item of items) {
+      const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+      totalAmount += lineTotal;
+      await UPDATE(Items).set({ lineTotal }).where({ ID: item.ID });
+    }
+    await UPDATE(Request).set({ totalAmount }).where({ ID: request_ID });
+  };
+  const recalcDraftTotals = (request_ID) =>
+    recalcTotals(request_ID, srv.entities.RequestItems.drafts, srv.entities.Requests.drafts);
+
   srv.after("UPDATE", "RequestItems.drafts", async (_, req) => {
-    const { RequestItems, Requests } = srv.entities;
-    const { ID } = req.params.at(-1);
-    const item = await SELECT.one.from(RequestItems.drafts).where({ ID });
-    if (!item) return;
-
-    const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
-    await UPDATE(RequestItems.drafts).set({ lineTotal }).where({ ID });
-
-    const items = await SELECT.from(RequestItems.drafts).columns("lineTotal").where({ request_ID: item.request_ID });
-    const totalAmount = items.reduce((sum, i) => sum + (parseFloat(i.lineTotal) || 0), 0);
-    await UPDATE(Requests.drafts).set({ totalAmount }).where({ ID: item.request_ID });
+    const item = await SELECT.one.from(srv.entities.RequestItems.drafts).columns("request_ID").where({ ID: req.params.at(-1).ID });
+    if (item) await recalcDraftTotals(item.request_ID);
   });
 
+  // The item is gone after the delete, so remember its request first.
+  srv.before("DELETE", "RequestItems.drafts", async (req) => {
+    const item = await SELECT.one.from(srv.entities.RequestItems.drafts).columns("request_ID").where({ ID: req.params.at(-1).ID });
+    req._requestId = item?.request_ID;
+  });
+  srv.after("DELETE", "RequestItems.drafts", async (_, req) => {
+    if (req._requestId) await recalcDraftTotals(req._requestId);
+  });
+
+
+  // ─── Steps are never client data ───────────────────────────────────────────
+  // ApprovalSteps is @readonly, but a deep write through its parent request would bypass that.
+  srv.before(["NEW", "CREATE", "UPDATE"], ["Requests", "Requests.drafts"], (req) => {
+    delete req.data.steps;
+  });
 
   // ─── Lock submitted requests ───────────────────────────────────────────────
   // Amount and cost center must stay what the budget reserved and the approvers saw.
@@ -125,6 +144,26 @@ module.exports = async (srv) => {
     const active = await SELECT.one.from(PurchaseRequest).columns("status").where({ ID });
     if (active && active.status !== "DRAFT" && active.status !== "REJECTED") {
       req.reject(400, `Cannot ${req.event === "DELETE" ? "delete" : "edit"} — current status is '${active.status}'`);
+    }
+  });
+
+  srv.before("SAVE", "Requests", async (req) => {
+    const date = req.data.requestedDeliveryDate;
+    if (date && date < new Date().toLocaleDateString("en-CA")) { // local YYYY-MM-DD; TZ set in mta.yaml
+      req.error({ status: 400, message: "Delivery date cannot be in the past", target: "in/requestedDeliveryDate" });
+    }
+
+    const items = await SELECT.from(srv.entities.RequestItems.drafts)
+      .columns("ID", "itemNumber", "quantity", "unitPrice")
+      .where({ request_ID: req.data.ID });
+    for (const item of items) {
+      const target = (field) => `in/items(ID=${item.ID},IsActiveEntity=false)/${field}`;
+      if (item.quantity != null && Number(item.quantity) <= 0) {
+        req.error({ status: 400, message: `Item ${item.itemNumber}: quantity must be greater than 0`, target: target("quantity") });
+      }
+      if (item.unitPrice != null && Number(item.unitPrice) < 0) {
+        req.error({ status: 400, message: `Item ${item.itemNumber}: unit price cannot be negative`, target: target("unitPrice") });
+      }
     }
   });
 
@@ -140,6 +179,16 @@ module.exports = async (srv) => {
         400,
         `Cannot submit — current status is '${request.status}'`
       );
+    }
+
+    if (!(Number(request.totalAmount) > 0)) {
+      return req.error(400, "Add at least one item with a quantity and price before submitting");
+    }
+
+    // Budgets are kept in the cost center's currency and nothing converts.
+    // Rows written outside the service (seed data) have no costCenterCurrency and are not checked.
+    if (request.costCenterCurrency && request.currency !== request.costCenterCurrency) {
+      return req.error(400, `Request is in ${request.currency} but cost center ${request.costCenter} budgets in ${request.costCenterCurrency}. Change the currency to ${request.costCenterCurrency}`);
     }
 
     // ── Run number check (max 3 submissions) ──
@@ -160,9 +209,19 @@ module.exports = async (srv) => {
         request.totalAmount
       );
 
+      // Warn when this request leaves less than 10% of the month's budget.
+      const budget = await SELECT.one.from(DepartmentBudget)
+        .columns("monthlyAllocation", "remainingAmount")
+        .where({ costCenter: request.costCenter, fiscalYear, fiscalMonth });
+      const allocation = Number(budget.monthlyAllocation) || 0;
+      const lowBudget = allocation > 0 && Number(budget.remainingAmount) < allocation * 0.1;
+      if (lowBudget) {
+        req.warn(`Budget for ${request.costCenterName || request.costCenter} is almost used up: ${budget.remainingAmount} ${request.currency || ""} left this month`);
+      }
+
       await UPDATE(PurchaseRequest)
         .set({
-          budgetCheckStatus: "WITHIN",
+          budgetCheckStatus: lowBudget ? "WARNING" : "WITHIN",
           budgetFiscalYear: fiscalYear,
           budgetFiscalMonth: fiscalMonth,
         })
@@ -196,37 +255,19 @@ module.exports = async (srv) => {
       .set({ stepStatus: "COMPLETED" })
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
 
-    // ── Create approval steps based on amount ──
-    const steps = [];
-    if (request.totalAmount <= 5000) {
-      steps.push({
-        request_ID: ID,
-        stepNumber: 1,
-        approverRole: "Manager",
-        approverUserId: "Manager",
-        stepStatus: "ACTIVE",
-        decision: "PENDING",
-      });
-    } else {
-      steps.push(
-        {
-          request_ID: ID,
-          stepNumber: 1,
-          approverRole: "Manager",
-          approverUserId: "Manager",
-          stepStatus: "ACTIVE",
-          decision: "PENDING",
-        },
-        {
-          request_ID: ID,
-          stepNumber: 2,
-          approverRole: "Finance",
-          approverUserId: "Finance",
-          stepStatus: "ACTIVE",
-          decision: "PENDING",
-        }
-      );
-    }
+    // ── Create approval steps: Finance too when the amount is above the currency's limit ──
+    const { financeLimit } = (await SELECT.one.from(CurrencyValue).columns("financeLimit").where({ code: request.currency })) ?? {};
+    const needsFinance = financeLimit == null || Number(request.totalAmount) > Number(financeLimit);
+    const step = (stepNumber, approverRole) => ({
+      request_ID: ID,
+      runNumber,
+      stepNumber,
+      approverRole,
+      approverUserId: approverRole,
+      stepStatus: "ACTIVE",
+      decision: "PENDING",
+    });
+    const steps = needsFinance ? [step(1, "Manager"), step(2, "Finance")] : [step(1, "Manager")];
 
     await INSERT.into(ApprovalStep).entries(steps);
 
@@ -254,13 +295,16 @@ module.exports = async (srv) => {
       newValue: "IN_APPROVAL",
       performedBy: req.user?.id || "anonymous",
     });
-    await sendAlert({
+    const result = await SELECT.one.from(PurchaseRequest).where({ ID });
+    // After commit and not awaited: a slow alert service must not hold the budget row lock.
+    req.on("succeeded", () => sendAlert({
       eventType: "purchase-request.submitted",
       severity: "INFO",
-      subject: `New Purchase Request Submitted: ${request.requestNumber || ID}`,
-      body: `Request submitted by ${req.user?.id || "anonymous"} for ${request.costCenterName} — Amount: ${request.totalAmount} EUR`
-    });
-    return await SELECT.one.from(PurchaseRequest).where({ ID });
+      subject: `New Purchase Request Submitted: ${result.requestNumber}`,
+      body: `Request submitted by ${req.user?.id || "anonymous"} for ${request.costCenterName} — Amount: ${request.totalAmount} ${request.currency || ""}`
+    }));
+    req.notify(`Request ${result.requestNumber} submitted for approval`);
+    return result;
   });
 
   // ─── cancel ────────────────────────────────────────────────────────────────
@@ -290,48 +334,41 @@ module.exports = async (srv) => {
       performedBy: req.user?.id || "anonymous",
     });
 
+    req.notify("Request cancelled");
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 
   // ─── lineTotal + totalAmount recalculation ─────────────────────────────────
-  srv.after(["CREATE", "UPDATE"], "Requests", async (data, req) => {
-    const requestId = data?.ID;
-    if (!requestId) return;
-
-    const items = await SELECT.from(RequestItem).where({ request_ID: requestId });
-    if (!items.length) {
-      await UPDATE(PurchaseRequest).set({ totalAmount: 0 }).where({ ID: requestId });
-      return;
-    }
-
-    let totalAmount = 0;
-    for (const item of items) {
-      const qty = parseFloat(item.quantity) || 0;
-      const price = parseFloat(item.unitPrice) || 0;
-      const lineTotal = qty * price;
-      totalAmount += lineTotal;
-      await UPDATE(RequestItem).set({ lineTotal }).where({ ID: item.ID });
-    }
-
-    await UPDATE(PurchaseRequest).set({ totalAmount }).where({ ID: requestId });
+  srv.after(["CREATE", "UPDATE"], "Requests", async (data) => {
+    if (data?.ID) await recalcTotals(data.ID, RequestItem, PurchaseRequest);
   });
 
   srv.on("READ", "UserInfo", (req) => ({ hideCreate: !req.user.is("Requester") }));
 
-  // ─── Populate isApprover virtual field ────────────────────────────────────
-  // True only when this user can act on an active step right now (drives Approve/Reject buttons).
+  // ─── Populate per-user button flags ───────────────────────────────────────
+  // isApprover: user can act on an active step now (Approve/Reject).
+  // isOwner / hideEdit: only the requester submits, cancels, edits or deletes.
+  // Read from the DB because the UI's $select may not include createdBy/status.
   srv.after("READ", "Requests", async (data, req) => {
     const rows = (Array.isArray(data) ? data : [data]).filter((r) => r?.ID);
     if (!rows.length) return;
-    const steps = await SELECT.from(ApprovalStep)
-      .columns("request_ID", "approverRole")
-      .where({ request_ID: { in: rows.map((r) => r.ID) }, stepStatus: "ACTIVE" });
+    const ids = rows.map((r) => r.ID);
+    const [steps, actives] = await Promise.all([
+      SELECT.from(ApprovalStep).columns("request_ID", "approverRole")
+        .where({ request_ID: { in: ids }, stepStatus: "ACTIVE" }),
+      SELECT.from(PurchaseRequest).columns("ID", "createdBy", "status").where({ ID: { in: ids } }),
+    ]);
     for (const row of rows) {
+      const active = actives.find((a) => a.ID === row.ID);
       row.isApprover = steps.some((s) => s.request_ID === row.ID && req.user.is(s.approverRole));
+      // No active row yet = a new draft, which only its creator can see.
+      row.isOwner = !active || active.createdBy === req.user.id;
+      row.hideEdit = !row.isOwner || (!!active && active.status !== "DRAFT" && active.status !== "REJECTED");
     }
   });
 
   // ─── Export budget helpers for use in approval-handler.js ─────────────────
   srv._releaseBudget = releaseBudget;
   srv._consumeBudget = consumeBudget;
+  srv._recalcDraftTotals = recalcDraftTotals;
 };

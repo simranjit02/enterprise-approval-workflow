@@ -128,6 +128,31 @@ describe('access control', () => {
     expect((await GET(`/odata/v4/approval/UserInfo`, REQUESTER)).data.hideCreate).to.equal(false)
   })
 
+  it('a requester cannot change approval steps through a draft', async () => {
+    const { PurchaseRequest, ApprovalStep } = cds.entities('com.enterprise.approval')
+    const STEP_ID = 'b7100000-0000-0000-0000-000000000001'
+    await UPDATE(PurchaseRequest).set({
+      status: 'REJECTED', title: 't', category: 'IT', priority: 'LOW', justification: 'j'
+    }).where({ ID: REQUEST_ID })
+    await INSERT.into(ApprovalStep).entries({
+      ID: STEP_ID, request_ID: REQUEST_ID, stepNumber: 1, approverRole: 'Manager', approverUserId: 'm',
+      stepStatus: 'COMPLETED', decision: 'REJECTED', comment: 'no'
+    })
+    const draft = `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=false)`
+    const step = `/odata/v4/approval/ApprovalSteps(ID=${STEP_ID},IsActiveEntity=false)`
+    const tryIt = { ...REQUESTER, validateStatus: () => true }
+    await POST(`/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.draftEdit`, { PreserveChanges: true }, REQUESTER)
+
+    expect((await PATCH(step, { decision: 'APPROVED' }, tryIt)).status).to.equal(405)
+    expect((await POST(`${draft}/steps`, { stepNumber: 2, approverRole: 'Manager', approverUserId: 'x' }, tryIt)).status).to.equal(405)
+    expect((await DEL(step, tryIt)).status).to.equal(405)
+    await PATCH(draft, { steps: [{ ID: STEP_ID, decision: 'APPROVED' }] }, tryIt)
+    await POST(`${draft}/ApprovalService.draftActivate`, {}, REQUESTER)
+
+    const steps = await SELECT.from(ApprovalStep).columns('decision').where({ request_ID: REQUEST_ID })
+    expect(steps).to.deep.equal([{ decision: 'REJECTED' }])
+  })
+
   it('non-admins cannot write DepartmentBudget', async () => {
     for (const user of [REQUESTER, VIEWER]) {
       const { status } = await PATCH(
