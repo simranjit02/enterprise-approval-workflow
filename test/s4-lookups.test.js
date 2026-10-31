@@ -18,7 +18,7 @@ const S4_DATA = {
     ? [{ CompanyCode: '1710', Currency: 'USD' }, { CompanyCode: '1110', Currency: 'GBP' }]
     : [{ CompanyCode: '1010', Currency: 'EUR' }],
   'API_COSTCENTER_SRV.A_CostCenter_2': (w) => ({
-    '11101901': { CostCenter: '11101901', CostCenterName: 'Back Office (GB)', CompanyCode: '1110', IsBlockedForCommitmentPosting: false },
+    '11101901': { CostCenter: '11101901', CostCenterName: 'Back Office (GB)', CompanyCode: '1110', CostCenterCurrency: 'GBP', IsBlockedForCommitmentPosting: false },
   })[w.CostCenter],
   'API_PRODUCT_SRV.A_Product': (w) => w.Product === 'TG10' ? { Product: 'TG10', BaseUnit: 'PC', ProductGroup: 'L001' } : undefined,
   'API_PRODUCT_SRV.A_ProductDescription': () => ({ ProductDescription: 'Trad.Good 10' }),
@@ -74,7 +74,7 @@ describe('S/4HANA lookups', () => {
     expect(res.headers['sap-messages']).to.match(/no default currency/)
 
     const { data } = await PATCH(draft, { costCenter: '11101901' }, REQUESTER)
-    expect(data).to.include({ costCenterName: 'Back Office (GB)', currency: 'GBP' })
+    expect(data).to.include({ costCenterName: 'Back Office (GB)', costCenterCurrency: 'GBP', currency: 'GBP' })
   })
 
   it('fills product data and the agreed price per unit', async () => {
@@ -99,6 +99,28 @@ describe('S/4HANA lookups', () => {
     await PATCH(draft, { vendorId: '10300001' }, REQUESTER)
     expect((await GET(itemUrl, REQUESTER)).data).to.include({ unitPrice: 12.35, lineTotal: 24.7 })
     expect((await GET(draft, REQUESTER)).data.totalAmount).to.equal(24.7)
+  })
+
+  it('skips expired prices', async () => {
+    price = [{ to_PurgInfoRecdOrgPlantData: { results: [
+      { NetPriceAmount: '9.99', MaterialPriceUnitQty: '1', Currency: 'EUR', PriceValidityEndDate: '/Date(1704067200000)/' }, // ended 2024-01-01
+      { NetPriceAmount: '15', MaterialPriceUnitQty: '1', Currency: 'EUR', PriceValidityEndDate: '/Date(253402214400000)/' },
+    ] } }]
+    const draft = await newDraft()
+    await PATCH(draft, { vendorId: '10300001' }, REQUESTER)
+    const { data: item } = await POST(`${draft}/items`, {}, REQUESTER)
+    const { data } = await PATCH(`/odata/v4/approval/RequestItems(ID=${item.ID},IsActiveEntity=false)`, { productId: 'TG10' }, REQUESTER)
+    expect(data.unitPrice).to.equal(15)
+  })
+
+  it('changing the currency warns about prices in the old currency', async () => {
+    price = [{ to_PurgInfoRecdOrgPlantData: { results: [{ NetPriceAmount: '12.35', MaterialPriceUnitQty: '1', Currency: 'EUR' }] } }]
+    const draft = await newDraft()
+    await PATCH(draft, { vendorId: '10300001' }, REQUESTER)
+    const { data: item } = await POST(`${draft}/items`, {}, REQUESTER)
+    await PATCH(`/odata/v4/approval/RequestItems(ID=${item.ID},IsActiveEntity=false)`, { productId: 'TG10' }, REQUESTER)
+    const res = await PATCH(draft, { currency: 'USD' }, REQUESTER)
+    expect(res.headers['sap-messages']).to.match(/12.35 EUR, but the request is in USD/)
   })
 
   it('does not fill a price in another currency', async () => {

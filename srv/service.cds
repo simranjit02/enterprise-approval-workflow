@@ -187,8 +187,6 @@ service ApprovalService {
     @readonly
     entity CountryValues    as projection on db.CountryValue;
     @readonly
-    entity IndustryValues   as projection on db.IndustryValue;
-    @readonly
     entity CurrencyValues   as projection on db.CurrencyValue;
     @readonly
     entity DepartmentBudget as projection on db.DepartmentBudget;
@@ -197,8 +195,9 @@ service ApprovalService {
 annotate ApprovalService with @requires: ['authenticated-user'];
 
 annotate ApprovalService.Requests with {
-    budgetFiscalYear  @readonly;
-    budgetFiscalMonth @readonly;
+    budgetFiscalYear   @readonly;
+    budgetFiscalMonth  @readonly;
+    costCenterCurrency @readonly;
     title             @mandatory;
     category          @mandatory;
     priority          @mandatory;

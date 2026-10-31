@@ -17,6 +17,8 @@ modules:
     parameters:
       instances: 1
       buildpack: nodejs_buildpack
+    properties:
+      TZ: Europe/Berlin # company time zone: budget month and "today" use it
     build-parameters:
       builder: npm-ci
     provides:

@@ -1,9 +1,13 @@
 const cds = require("@sap/cds");
 const { sendAlert } = require("./ans-helper");
 module.exports = async (srv) => {
-  const { PurchaseRequest, ApprovalStep, AuditLog } = cds.entities(
+  const { PurchaseRequest, ApprovalStep, AuditLog, WorkflowInstance } = cds.entities(
     "com.enterprise.approval",
   );
+
+  const closeRun = (ID) => UPDATE(WorkflowInstance)
+    .set({ status: "COMPLETED", completedAt: new Date() })
+    .where({ request_ID: ID, status: "RUNNING" });
 
   // Manager and Finance steps are active together, so pick the one this user can act on.
   const activeStepFor = async (request, req) => {
@@ -14,6 +18,13 @@ module.exports = async (srv) => {
     if (!steps.length) req.reject(403, "No active step found for you");
     const step = steps.find((s) => req.user.is(s.approverRole));
     if (!step) req.reject(403, `Only a ${steps.map((s) => s.approverRole).join(" or ")} can act on this request`);
+    // Two-step approval needs two people, even when one user holds both roles.
+    if (step.runNumber != null) {
+      const own = await SELECT.one.from(ApprovalStep).columns("approverRole").where({
+        request_ID: request.ID, runNumber: step.runNumber, decision: "APPROVED", approverUserId: req.user.id,
+      });
+      if (own) req.reject(403, `You already approved this request as ${own.approverRole}. The ${step.approverRole} step needs a different person`);
+    }
     return step;
   };
 
@@ -43,6 +54,7 @@ module.exports = async (srv) => {
     if (!pendingSteps.length) {
       await UPDATE(PurchaseRequest).set({ status: "APPROVED", completedAt: new Date() }).where({ ID });
       await srv._consumeBudget(request);
+      await closeRun(ID);
       newStatus = "APPROVED";
     }
     await INSERT.into(AuditLog).entries({
@@ -54,12 +66,12 @@ module.exports = async (srv) => {
       newValue: newStatus,
       performedBy: req.user.id,
     });
-    await sendAlert({
+    req.on("succeeded", () => sendAlert({
       eventType: "purchase-request.approved",
       severity: "INFO",
       subject: `Purchase Request Approved: ${request.requestNumber || ID}`,
       body: `Request approved by ${req.user.id} for ${request.costCenterName} — Amount: ${request.totalAmount} ${request.currency || ""}`
-    });
+    }));
     req.notify(newStatus === "APPROVED"
       ? `Request ${request.requestNumber} approved`
       : `Your approval is recorded. Waiting for ${pendingSteps.map((s) => s.approverRole).join(" and ")}`);
@@ -93,6 +105,7 @@ module.exports = async (srv) => {
     await srv._releaseBudget(request);
 
     await UPDATE(PurchaseRequest).set({ status: "REJECTED", completedAt: new Date() }).where({ ID });
+    await closeRun(ID);
     await INSERT.into(AuditLog).entries({
       request_ID: ID,
       entityName: "PurchaseRequest",
@@ -102,12 +115,12 @@ module.exports = async (srv) => {
       newValue: "REJECTED",
       performedBy: req.user.id,
     });
-    await sendAlert({
+    req.on("succeeded", () => sendAlert({
       eventType: "purchase-request.rejected",
       severity: "WARNING",
       subject: `Purchase Request Rejected: ${request.requestNumber || ID}`,
       body: `Request rejected by ${req.user.id} for ${request.costCenterName} — Reason: ${comment}`
-    });
+    }));
     req.notify(`Request ${request.requestNumber} rejected. The requester can change and resubmit it`);
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });

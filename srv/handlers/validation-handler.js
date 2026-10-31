@@ -11,7 +11,7 @@ module.exports = async (srv) => {
 
     // shortcut: one controlling area; make it configurable if the company has more.
     const CONTROLLING_AREA = "A000";
-    const today = () => new Date().toISOString().slice(0, 10);
+    const today = () => new Date().toLocaleDateString("en-CA"); // local YYYY-MM-DD; TZ set in mta.yaml
 
     // An unreachable S/4 system gets a clear message instead of a raw 502.
     const fromS4 = async (req, what, query) => {
@@ -93,6 +93,7 @@ module.exports = async (srv) => {
                 req.reject({ status: 400, message: `Cost center ${costCenter} is blocked for purchasing`, target: "costCenter" });
             }
             req.data.costCenterName = cc.CostCenterName;
+            req.data.costCenterCurrency = cc.CostCenterCurrency;
             companyCode = cc.CompanyCode;
         }
 
@@ -112,7 +113,7 @@ module.exports = async (srv) => {
 
     const costCenterInS4 = (req, costCenter) => fromS4(req, "cost center", () => COSTCENTER.run(
         SELECT.one.from("API_COSTCENTER_SRV.A_CostCenter_2")
-            .columns("CostCenter", "CostCenterName", "CompanyCode", "IsBlockedForCommitmentPosting")
+            .columns("CostCenter", "CostCenterName", "CompanyCode", "CostCenterCurrency", "IsBlockedForCommitmentPosting")
             .where({
                 CostCenter: costCenter,
                 ControllingArea: CONTROLLING_AREA,
@@ -150,7 +151,10 @@ module.exports = async (srv) => {
             path: `/A_PurchasingInfoRecord?$filter=${filter}&$expand=to_PurgInfoRecdOrgPlantData`,
         });
         const prices = (records ?? []).flatMap((r) => r.to_PurgInfoRecdOrgPlantData?.results ?? r.to_PurgInfoRecdOrgPlantData ?? []);
-        const price = prices.find((p) => Number(p.NetPriceAmount) > 0);
+        // OData v2 sends dates as /Date(ms)/; a price is valid through its end date.
+        const endsAt = (v) => Number(/Date\((\d+)/.exec(v)?.[1] ?? Date.parse(v));
+        const startOfToday = Date.parse(today());
+        const price = prices.find((p) => Number(p.NetPriceAmount) > 0 && !(endsAt(p.PriceValidityEndDate) < startOfToday));
         if (!price) return null;
         const perUnit = Number(price.NetPriceAmount) / (Number(price.MaterialPriceUnitQty) || 1);
         return { amount: Math.round(perUnit * 100) / 100, currency: price.Currency };
@@ -197,17 +201,17 @@ module.exports = async (srv) => {
         if (unitPrice != null) req.data.unitPrice = unitPrice;
     });
 
-    // Picking the vendor (or a cost center that changes its currency) re-prices the items already on the request.
+    // Picking the vendor, or anything that changes the currency, re-prices the items already on the request.
     srv.after("UPDATE", "Requests.drafts", async (_, req) => {
-        if (!req.data.vendorId && !req.data.costCenter) return;
+        if (!req.data.vendorId && !req.data.costCenter && !req.data.currency) return;
         const ID = req.params.at(-1).ID;
         const request = await SELECT.one.from(Requests.drafts).columns("vendorId", "currency").where({ ID });
         if (!request?.vendorId) return;
         const items = await SELECT.from(RequestItems.drafts).columns("ID", "productId").where({ request_ID: ID, productId: { "!=": null } });
-        for (const item of items) {
+        await Promise.all(items.map(async (item) => {
             const unitPrice = await priceFor(req, request, item.productId);
             if (unitPrice != null) await UPDATE(RequestItems.drafts).set({ unitPrice }).where({ ID: item.ID });
-        }
+        }));
         if (items.length) await srv._recalcDraftTotals(ID);
     });
 

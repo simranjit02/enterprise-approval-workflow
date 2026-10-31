@@ -312,12 +312,6 @@ annotate service.Requests with @(
                 Value: vendorCountry,
                 @UI.Hidden,
             },
-            {
-                $Type: 'UI.DataField',
-                Label: 'Industry',
-                Value: vendorIndustry,
-                @UI.Hidden,
-            },
         ],
     },
 
@@ -333,6 +327,11 @@ annotate service.Requests with @(
                 $Type: 'UI.DataField',
                 Value: costCenterName,
                 Label: 'Cost Center Name',
+            },
+            {
+                $Type: 'UI.DataField',
+                Value: costCenterCurrency,
+                Label: 'Budget Currency',
             },
             {
                 $Type : 'UI.DataFieldForAction',
@@ -399,8 +398,6 @@ annotate service.Requests with {
     requestNumber     @Common.FieldControl: #ReadOnly;
     status            @Common.FieldControl: #ReadOnly;
     budgetCheckStatus @Common.FieldControl: #ReadOnly;
-    aiRiskLevel       @Common.FieldControl: #ReadOnly;
-    aiRiskSummary     @Common.FieldControl: #ReadOnly;
     submittedAt       @Common.FieldControl: #ReadOnly;
     completedAt       @Common.FieldControl: #ReadOnly;
     totalAmount       @Common.FieldControl: #ReadOnly;
@@ -469,6 +466,7 @@ annotate service.Requests with @(
         SourceProperties: [costCenter],
         TargetProperties: [
             'costCenterName',
+            'costCenterCurrency',
             'currency',
             'totalAmount'
         ],
@@ -749,17 +747,6 @@ annotate service.Requests with {
             Parameters    : [{
                 $Type            : 'Common.ValueListParameterOut',
                 LocalDataProperty: vendorCountry,
-                ValueListProperty: 'code',
-            }],
-        },
-    );
-    vendorIndustry @(
-        Common.ValueListWithFixedValues: true,
-        Common.ValueList               : {
-            CollectionPath: 'IndustryValues',
-            Parameters    : [{
-                $Type            : 'Common.ValueListParameterOut',
-                LocalDataProperty: vendorIndustry,
                 ValueListProperty: 'code',
             }],
         },
