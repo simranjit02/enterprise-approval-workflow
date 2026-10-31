@@ -8,6 +8,12 @@ annotate service.Requests with @(
         category
     ],
     UI.CreateHidden               : {$edmJson: {$Path: '/UserInfo/hideCreate'}},
+    Capabilities.NavigationRestrictions: {RestrictedProperties: [{
+        NavigationProperty: steps,
+        InsertRestrictions: {Insertable: false},
+        UpdateRestrictions: {Updatable: false},
+        DeleteRestrictions: {Deletable: false}
+    }]},
     UI.UpdateHidden               : {$edmJson: {$Path: 'hideEdit'}},
     UI.DeleteHidden               : {$edmJson: {$Path: 'hideEdit'}},
     UI.HeaderInfo                 : {
@@ -243,6 +249,11 @@ annotate service.Requests with @(
             ID    : 'ApprovalStepsFacet',
             Label : 'Approval Steps',
             Target: 'steps/@UI.LineItem',
+            // DRAFT = never submitted, so there are no steps yet
+            ![@UI.Hidden]: {$edmJson: {$Eq: [
+                {$Path: 'status'},
+                {$String: 'DRAFT'}
+            ]}},
         },
     ],
 
@@ -442,6 +453,41 @@ annotate service.Requests with actions {
     });
 };
 
+// Filled from S/4HANA when vendor / cost center / product is picked (validation-handler.js)
+annotate service.Requests with @(
+    Common.SideEffects #VendorChange    : {
+        SourceProperties: [vendorId],
+        TargetProperties: [
+            'vendorName',
+            'vendorCountry',
+            'currency',
+            'totalAmount'
+        ],
+        TargetEntities  : [items],
+    },
+    Common.SideEffects #CostCenterChange: {
+        SourceProperties: [costCenter],
+        TargetProperties: [
+            'costCenterName',
+            'currency',
+            'totalAmount'
+        ],
+        TargetEntities  : [items],
+    },
+);
+
+annotate service.RequestItems with @(Common.SideEffects #ProductChange: {
+    SourceProperties: [productId],
+    TargetProperties: [
+        'productName',
+        'productCategory',
+        'unit',
+        'unitPrice',
+        'lineTotal'
+    ],
+    TargetEntities  : [request],
+});
+
 // ─── RequestItems: SideEffects + LineItem ─────────────────────────────────────
 
 annotate service.RequestItems with @(Common.SideEffects #RecalcOnChange: {
@@ -605,6 +651,10 @@ annotate service.Requests with {
                     $Type            : 'Common.ValueListParameterDisplayOnly',
                     ValueListProperty: 'CompanyCode',
                 },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'currency',
+                },
             ],
         },
         Common.ValueListWithFixedValues: false,
@@ -640,8 +690,8 @@ annotate service.RequestItems with {
                 },
                 {
                     $Type            : 'Common.ValueListParameterOut',
-                    LocalDataProperty: unit,
-                    ValueListProperty: 'baseUnit',
+                    LocalDataProperty: productName,
+                    ValueListProperty: 'productName',
                 },
             ],
         },
@@ -720,4 +770,23 @@ annotate service.Requests with {
 
 annotate service.Requests with {
     totalAmount @Measures.ISOCurrency: currency;
+};
+
+// ─── Value help column titles ─────────────────────────────────────────────────
+
+annotate service.VendorHelp with {
+    vendorId   @title: 'Vendor ID';
+    vendorName @title: 'Vendor Name';
+};
+
+annotate service.ProductHelp with {
+    productId   @title: 'Product ID';
+    productName @title: 'Product Name';
+};
+
+annotate service.CostCenterHelp with {
+    costCenterId   @title: 'Cost Center';
+    costCenterName @title: 'Cost Center Name';
+    CompanyCode    @title: 'Company Code';
+    currency       @title: 'Currency';
 };

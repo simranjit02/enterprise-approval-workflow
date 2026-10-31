@@ -69,9 +69,11 @@ describe('user messages', () => {
 
   it('saving a draft checks items and delivery date', async () => {
     const { data: draft } = await POST(`/odata/v4/approval/Requests`, {
-      title: 'x', category: 'IT', priority: 'LOW', justification: 'y', currency: 'EUR', costCenter: 'MSG-CC',
+      title: 'x', category: 'IT', priority: 'LOW', justification: 'y', currency: 'EUR',
       requestedDeliveryDate: '2000-01-01'
     }, REQUESTER)
+    // set directly: going through the service would look the cost center up in S/4HANA
+    await UPDATE(cds.services.ApprovalService.entities.Requests.drafts).set({ costCenter: 'MSG-CC' }).where({ ID: draft.ID })
     const base = `/odata/v4/approval/Requests(ID=${draft.ID},IsActiveEntity=false)`
     await POST(`${base}/items`, { productName: 'Mouse', unit: 'EA', quantity: 1, unitPrice: -5 }, REQUESTER)
     const res = await POST(`${base}/ApprovalService.draftActivate`, {}, fail(REQUESTER))

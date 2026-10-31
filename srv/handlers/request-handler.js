@@ -103,20 +103,29 @@ module.exports = async (srv) => {
   });
 
   // ─── Live line/request totals while editing a draft ───────────────────────
-  srv.after("UPDATE", "RequestItems.drafts", async (_, req) => {
+  const recalcDraftTotals = async (request_ID) => {
     const { RequestItems, Requests } = srv.entities;
-    const { ID } = req.params.at(-1);
-    const item = await SELECT.one.from(RequestItems.drafts).where({ ID });
-    if (!item) return;
+    const items = await SELECT.from(RequestItems.drafts).columns("ID", "quantity", "unitPrice").where({ request_ID });
+    let totalAmount = 0;
+    for (const item of items) {
+      const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
+      totalAmount += lineTotal;
+      await UPDATE(RequestItems.drafts).set({ lineTotal }).where({ ID: item.ID });
+    }
+    await UPDATE(Requests.drafts).set({ totalAmount }).where({ ID: request_ID });
+  };
 
-    const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0);
-    await UPDATE(RequestItems.drafts).set({ lineTotal }).where({ ID });
-
-    const items = await SELECT.from(RequestItems.drafts).columns("lineTotal").where({ request_ID: item.request_ID });
-    const totalAmount = items.reduce((sum, i) => sum + (parseFloat(i.lineTotal) || 0), 0);
-    await UPDATE(Requests.drafts).set({ totalAmount }).where({ ID: item.request_ID });
+  srv.after("UPDATE", "RequestItems.drafts", async (_, req) => {
+    const item = await SELECT.one.from(srv.entities.RequestItems.drafts).columns("request_ID").where({ ID: req.params.at(-1).ID });
+    if (item) await recalcDraftTotals(item.request_ID);
   });
 
+
+  // ─── Steps are never client data ───────────────────────────────────────────
+  // ApprovalSteps is @readonly, but a deep write through its parent request would bypass that.
+  srv.before(["NEW", "CREATE", "UPDATE"], ["Requests", "Requests.drafts"], (req) => {
+    delete req.data.steps;
+  });
 
   // ─── Lock submitted requests ───────────────────────────────────────────────
   // Amount and cost center must stay what the budget reserved and the approvers saw.
@@ -380,4 +389,5 @@ module.exports = async (srv) => {
   // ─── Export budget helpers for use in approval-handler.js ─────────────────
   srv._releaseBudget = releaseBudget;
   srv._consumeBudget = consumeBudget;
+  srv._recalcDraftTotals = recalcDraftTotals;
 };
