@@ -1,0 +1,33 @@
+{
+  "configuration": {
+    "actions": [
+      {
+        "name": "purchase-request-email",
+        "type": "EMAIL",
+        "state": "ENABLED",
+        "description": "Email purchase request alerts",
+        "properties": {
+          "destination": "simranjitsingh58648@gmail.com"
+        }
+      }
+    ],
+    "conditions": [
+      {
+        "name": "purchase-request-events",
+        "propertyKey": "eventType",
+        "predicate": "STARTS_WITH",
+        "propertyValue": "purchase-request.",
+        "description": "Events sent by srv/handlers/ans-helper.js"
+      }
+    ],
+    "subscriptions": [
+      {
+        "name": "purchase-request-alerts",
+        "conditions": ["purchase-request-events"],
+        "actions": ["purchase-request-email"],
+        "state": "ENABLED",
+        "description": "Submit, approve and reject alerts"
+      }
+    ]
+  }
+}

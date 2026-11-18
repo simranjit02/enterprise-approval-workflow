@@ -81,6 +81,26 @@ describe('approve action', () => {
     expect(afterManager.status).to.equal('APPROVED')
   })
 
+  it('alerts "approved" only when the last step is approved', async () => {
+    const { ApprovalStep } = cds.entities('com.enterprise.approval')
+    await INSERT.into(ApprovalStep).entries({
+      request_ID: REQUEST_ID, stepNumber: 2, approverRole: 'Finance', approverUserId: 'Finance',
+      stepStatus: 'ACTIVE', decision: 'PENDING'
+    })
+    // ANS is not bound in tests, so the helper logs the skipped event type.
+    const warn = console.warn, events = []
+    console.warn = (msg, eventType) => { if (msg.startsWith('[ANS]')) events.push(eventType) }
+    try {
+      const url = `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.approve`
+      await POST(url, {}, MANAGER)
+      await POST(url, {}, FINANCE)
+      await new Promise((resolve) => setImmediate(resolve))
+    } finally {
+      console.warn = warn
+    }
+    expect(events).to.deep.equal(['purchase-request.step-approved', 'purchase-request.approved'])
+  })
+
   it('sad path: Finance cannot approve a Manager step', async () => {
     const { status } = await POST(
       `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.approve`,

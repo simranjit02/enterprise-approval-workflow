@@ -7,13 +7,13 @@ async function getANSToken(credentials) {
     const response = await fetch(credentials.oauth_url, {
         method: "POST",
         signal: AbortSignal.timeout(5000),
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-            grant_type: "client_credentials",
-            client_id: credentials.client_id,
-            client_secret: credentials.client_secret
-        })
+        headers: {
+            "Authorization": "Basic " + Buffer.from(`${credentials.client_id}:${credentials.client_secret}`).toString("base64"),
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({ grant_type: "client_credentials" })
     });
+    if (!response.ok) throw new Error(`token request failed: HTTP ${response.status}`);
     const data = await response.json();
     return data.access_token;
 }
@@ -27,7 +27,7 @@ async function sendAlert({ eventType, severity = "INFO", subject, body }) {
             return;
         }
         const token = await getANSToken(credentials);
-        await fetch(`${credentials.url}/cf/producer/v1/resource-events`, {
+        const response = await fetch(`${credentials.url}/cf/producer/v1/resource-events`, {
             method: "POST",
             signal: AbortSignal.timeout(5000),
             headers: {
@@ -48,6 +48,7 @@ async function sendAlert({ eventType, severity = "INFO", subject, body }) {
                 tags: { "ans:enableEmail": "true" }
             })
         });
+        if (!response.ok) throw new Error(`HTTP ${response.status} ${await response.text()}`);
         console.log("[ANS] Alert sent:", eventType);
     } catch (err) {
         console.error("[ANS] Failed to send alert:", err.message);

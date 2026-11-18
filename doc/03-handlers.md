@@ -88,7 +88,7 @@ Each submission creates a WorkflowInstance; their count is the run number. Steps
 2. Finds the active step this user may act on (see below)
 3. Marks it `COMPLETED` / `APPROVED` and records the real user in `approverUserId`
 4. If no step is still pending: request → `APPROVED`, budget reserved → consumed, workflow run → `COMPLETED`
-5. Writes the audit log; the alert goes out after commit
+5. Writes the audit log; the alert goes out after commit — `purchase-request.approved` for the last step, `purchase-request.step-approved` (naming who it still waits for) otherwise
 
 ### Who may act on a step
 
@@ -200,7 +200,7 @@ submit()
   ├── Validate: status is DRAFT or REJECTED, total > 0
   ├── Validate: currency = cost center budget currency
   ├── Check: runNumber ≤ 3
-  ├── Reserve budget (atomic), warn below 10%
+  ├── Reserve budget (atomic), warn and alert below 10%
   ├── Request number on first submit
   ├── Create steps: Manager, + Finance above the currency limit
   ├── Create WorkflowInstance, Request → IN_APPROVAL

@@ -217,6 +217,12 @@ module.exports = async (srv) => {
       const lowBudget = allocation > 0 && Number(budget.remainingAmount) < allocation * 0.1;
       if (lowBudget) {
         req.warn(`Budget for ${request.costCenterName || request.costCenter} is almost used up: ${budget.remainingAmount} ${request.currency || ""} left this month`);
+        req.on("succeeded", () => sendAlert({
+          eventType: "purchase-request.budget-low",
+          severity: "WARNING",
+          subject: `Budget almost used up: ${request.costCenterName || request.costCenter}`,
+          body: `${budget.remainingAmount} of ${allocation} ${request.currency || ""} left for ${fiscalMonth}/${fiscalYear} after a request of ${request.totalAmount} ${request.currency || ""}`
+        }));
       }
 
       await UPDATE(PurchaseRequest)

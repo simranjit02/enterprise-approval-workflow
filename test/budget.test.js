@@ -107,6 +107,32 @@ describe('budget check on submit', () => {
     expect(Number(before.reservedAmount) - Number(after.reservedAmount)).to.equal(1000)
   })
 
+  it('alerts when a submit leaves less than 10% of the budget', async () => {
+    const { PurchaseRequest, DepartmentBudget } = cds.entities('com.enterprise.approval')
+    const now = new Date()
+    const period = { costCenter: 'TEST-CC', fiscalYear: now.getFullYear(), fiscalMonth: now.getMonth() + 1 }
+    await DELETE.from(DepartmentBudget).where({ costCenter: 'TEST-CC' })
+    await INSERT.into(DepartmentBudget).entries({ ...period, monthlyAllocation: 5000, consumedAmount: 0, reservedAmount: 0, remainingAmount: 5000 })
+    const ids = ['b9000000-0000-0000-0000-000000000001', 'b9000000-0000-0000-0000-000000000002']
+    await INSERT.into(PurchaseRequest).entries(ids.map((ID, i) => ({
+      ID, title: 'x', status: 'DRAFT', costCenter: 'TEST-CC', totalAmount: i ? 4000 : 600, createdBy: 'requester@company.com'
+    })))
+
+    // ANS is not bound in tests, so the helper logs the skipped event type.
+    const warn = console.warn, events = []
+    console.warn = (msg, eventType) => { if (msg.startsWith('[ANS]')) events.push(eventType) }
+    try {
+      for (const ID of ids) {
+        await POST(`/odata/v4/approval/Requests(ID=${ID},IsActiveEntity=true)/ApprovalService.submit`, {}, REQUESTER)
+        await new Promise((resolve) => setImmediate(resolve))
+      }
+    } finally {
+      console.warn = warn
+    }
+    // 600 leaves 4400 (no alert); 4000 more leaves 400, below 10% of 5000.
+    expect(events.sort()).to.deep.equal(['purchase-request.budget-low', 'purchase-request.submitted', 'purchase-request.submitted'])
+  })
+
   it('sad path: request exceeding budget is blocked with 400', async () => {
     const { status } = await POST(
       `/odata/v4/approval/Requests(ID=${REQUEST_ID_EXCEEDED},IsActiveEntity=true)/ApprovalService.submit`,

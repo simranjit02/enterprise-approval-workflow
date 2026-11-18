@@ -52,6 +52,23 @@ describe('reject action', () => {
     expect(result.completedAt).to.exist
   })
 
+  it('sends the rejected alert', async () => {
+    // ANS is not bound in tests, so the helper logs the skipped event type.
+    const warn = console.warn, events = []
+    console.warn = (msg, eventType) => { if (msg.startsWith('[ANS]')) events.push(eventType) }
+    try {
+      await POST(
+        `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.reject`,
+        { comment: 'Budget not justified' },
+        MANAGER
+      )
+      await new Promise((resolve) => setImmediate(resolve))
+    } finally {
+      console.warn = warn
+    }
+    expect(events).to.deep.equal(['purchase-request.rejected'])
+  })
+
   it('after reject only the requester gets Submit and Edit', async () => {
     await POST(
       `/odata/v4/approval/Requests(ID=${REQUEST_ID},IsActiveEntity=true)/ApprovalService.reject`,

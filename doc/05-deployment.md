@@ -253,6 +253,19 @@ Serves your UI files at runtime. The App Router binds to this to fetch and serve
 
 Stores named HTTP destinations. The App Router uses the `srv-api` destination to know the URL of the CAP backend.
 
+### Alert Notification
+
+```yaml
+- name: enterprise-approval-workflow-ans
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: alert-notification
+    service-plan: standard
+    path: ./ans-config.json
+```
+
+Receives the submit, approve, reject and low-budget events from `srv/handlers/ans-helper.js` and emails them. `ans-config.json` holds the email action, the condition (`eventType` starts with `purchase-request.`) and the subscription that links them, so a fresh trial account gets a working setup from `cf deploy`. ANS emails the recipient a confirmation link on first deploy; nothing is delivered until it is clicked. To change the recipient, edit `destination` in `ans-config.json` and redeploy.
+
 ---
 
 ## Build and Deploy Commands
@@ -358,3 +371,4 @@ Don't write `mta.yaml` from scratch. Use the CAP CLI commands — they generate 
 - [ ] Can submit a request (Requester role)
 - [ ] Can approve a request (Manager role)
 - [ ] Audit log entry created after each action
+- [ ] ANS confirmation email clicked; submitting a request sends an alert email (`cf logs enterprise-approval-workflow-srv --recent | grep ANS`)

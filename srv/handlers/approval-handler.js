@@ -66,15 +66,21 @@ module.exports = async (srv) => {
       newValue: newStatus,
       performedBy: req.user.id,
     });
-    req.on("succeeded", () => sendAlert({
+    const waitingFor = pendingSteps.map((s) => s.approverRole).join(" and ");
+    req.on("succeeded", () => sendAlert(newStatus === "APPROVED" ? {
       eventType: "purchase-request.approved",
       severity: "INFO",
       subject: `Purchase Request Approved: ${request.requestNumber || ID}`,
       body: `Request approved by ${req.user.id} for ${request.costCenterName} — Amount: ${request.totalAmount} ${request.currency || ""}`
+    } : {
+      eventType: "purchase-request.step-approved",
+      severity: "INFO",
+      subject: `Purchase Request ${request.requestNumber || ID}: ${step.approverRole} approved, waiting for ${waitingFor}`,
+      body: `${step.approverRole} step approved by ${req.user.id} for ${request.costCenterName} — Amount: ${request.totalAmount} ${request.currency || ""}. Waiting for ${waitingFor}`
     }));
     req.notify(newStatus === "APPROVED"
       ? `Request ${request.requestNumber} approved`
-      : `Your approval is recorded. Waiting for ${pendingSteps.map((s) => s.approverRole).join(" and ")}`);
+      : `Your approval is recorded. Waiting for ${waitingFor}`);
     return await SELECT.one.from(PurchaseRequest).where({ ID });
   });
 

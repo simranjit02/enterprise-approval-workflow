@@ -160,9 +160,12 @@ resources:
       service-name: enterprise-approval-workflow-html5-host
 
   - name: enterprise-approval-workflow-ans
-    type: org.cloudfoundry.existing-service
+    type: org.cloudfoundry.managed-service
     parameters:
+      service: alert-notification
+      service-plan: standard
       service-name: enterprise-approval-workflow-ans
+      path: ./ans-config.json
 
   - name: enterprise-approval-workflow-html5-runtime
     type: org.cloudfoundry.managed-service
