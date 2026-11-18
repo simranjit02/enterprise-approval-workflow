@@ -63,19 +63,17 @@ For a portfolio project where you want full control and a clean demo URL, standa
 
 ---
 
-## Why Separate `approverUserId` and `approverRole`?
+## Why Approve by Role, and Record the User?
 
-This decision came from thinking about how real enterprise approval workflows work.
+Each approval step has an `approverRole` and an `approverUserId`.
 
-In reality, approvers change. The manager who approves today might be on leave tomorrow. A system that hardcodes just the role (`Manager`) has no way to know which specific manager should approve a request.
+`approverRole` decides who may act: any user with the Manager role can approve a Manager step. The system does not know which manager owns which cost center, so assigning a named person at submit time would only be a guess — and a hard-coded person cannot go on leave.
 
-By storing `approverUserId`, the system:
-- Can send email notifications to the specific person
-- Can enforce that ONLY that person approves (the security guard)
-- Can track who actually approved vs who was assigned
-- Supports future features like delegation (if manager is unavailable, reassign to deputy)
+`approverUserId` starts as the role name and is overwritten with the real user when someone decides. So the step always shows who actually approved, which the audit trail and the two-person rule rely on:
+- nobody approves their own request
+- a user holding both Manager and Finance roles cannot approve both steps of one submission
 
-The tradeoff is that approver assignment is currently hardcoded in the handler (`manager@company.com`). In a real system this would come from an HR lookup or org chart API. The architecture supports this enhancement without schema changes.
+The next step for a real system is to assign the approver per cost center — S/4 already has a responsible user on each cost center (`CostCtrResponsibleUser`). It needs a mapping from S/4 user IDs to XSUAA users, and fits the current schema without changes.
 
 ---
 

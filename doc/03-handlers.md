@@ -4,9 +4,13 @@
 
 Handlers are where business logic lives. While `service.cds` declares what operations exist and who can call them, handlers implement what actually happens when those operations are called.
 
-The project has two active handler files:
-- `request-handler.js` — handles the `submit` action
-- `approval-handler.js` — handles the `approve` and `reject` actions
+| File | Job |
+|---|---|
+| `request-handler.js` | submit, cancel, edit locks, totals, budget reservation, per-user button flags |
+| `approval-handler.js` | approve and reject |
+| `validation-handler.js` | S/4HANA lookups: value helps, vendor/cost center/product checks, prices, currency |
+| `admin-handler.js` | budget maintenance (AdminService) |
+| `ans-helper.js` | email alerts through SAP Alert Notification |
 
 ---
 
@@ -15,12 +19,13 @@ The project has two active handler files:
 ```javascript
 // srv/service.js
 module.exports = cds.service.impl(async (srv) => {
-  require('./handlers/request-handler')(srv)
-  require('./handlers/approval-handler')(srv)
+  await require('./handlers/request-handler')(srv)
+  await require('./handlers/approval-handler')(srv)
+  await require('./handlers/validation-handler')(srv)
 })
 ```
 
-Each handler file exports a function that receives the `srv` object. This function registers event handlers on the service. The pattern `srv.on('submit', 'Requests', async (req) => {...})` means: "when the `submit` action is called on the `Requests` entity, run this function."
+Each handler file exports a function that receives the `srv` object and registers event handlers on it. `srv.on('submit', 'Requests', async (req) => {...})` means: "when the `submit` action is called on the `Requests` entity, run this function." The order matters: approval and validation handlers use helpers the request handler attaches to `srv` (`srv._releaseBudget`, `srv._consumeBudget`, `srv._recalcDraftTotals`). `AdminService` has its own file, wired with `@impl` in `admin-service.cds`.
 
 ---
 
@@ -29,61 +34,49 @@ Each handler file exports a function that receives the `srv` object. This functi
 ### What it does
 
 When a requester clicks Submit, this handler:
-1. Validates the request exists and is in the right state
-2. Checks resubmission limits (max 3 attempts)
-3. Creates the appropriate approval steps based on the amount
-4. Creates a WorkflowInstance record
-5. Updates the request status to `IN_APPROVAL`
-6. Writes an audit log entry
+1. Validates the request exists and is `DRAFT` or `REJECTED`
+2. Refuses an empty request (total 0)
+3. Refuses a request whose currency differs from the cost center's budget currency
+4. Checks resubmission limits (max 3 submissions)
+5. Reserves the amount in this month's budget, and warns when less than 10% is left
+6. Assigns a request number on the first submission
+7. Creates the approval steps
+8. Creates a WorkflowInstance record and sets the status to `IN_APPROVAL`
+9. Writes an audit log entry, and sends an alert after the transaction commits
 
 ### Routing logic
 
 ```javascript
-if (request.amount <= 5000) {
-  // Single step: Manager only
-  steps.push({
-    stepNumber: 1,
-    approverRole: 'Manager',
-    approverUserId: 'manager@company.com',
-    stepStatus: 'ACTIVE',
-  });
-} else {
-  // Two parallel steps: Manager + Finance
-  steps.push({ stepNumber: 1, approverRole: 'Manager', ... });
-  steps.push({ stepNumber: 2, approverRole: 'Finance', ... });
-}
+const { financeLimit } = (await SELECT.one.from(CurrencyValue)
+  .columns("financeLimit").where({ code: request.currency })) ?? {};
+const needsFinance = financeLimit == null || Number(request.totalAmount) > Number(financeLimit);
+const steps = needsFinance ? [step(1, "Manager"), step(2, "Finance")] : [step(1, "Manager")];
 ```
 
-**Why hardcoded approver emails?**
-This is a deliberate simplification for the portfolio project. In a real enterprise system, the approver would be looked up from an HR system or org chart API. The architecture supports this — you just replace the hardcoded value with an API call.
+Every request needs a Manager. Above the currency's `financeLimit`, Finance must approve too. The limit is per currency because the same number means different money, and a currency without a limit always needs Finance.
 
-**Why check for `DRAFT` AND `REJECTED` status?**
+**Why approvers by role, not by person?**
+Nothing in the system knows which manager owns which cost center. Any user with the step's role may act, and the step records who did. A real system would look the approver up, e.g. the cost center's responsible user in S/4.
+
+### Budget reservation
+
 ```javascript
-if (request.status !== 'DRAFT' && request.status !== 'REJECTED') {
-  return req.error(400, `Cannot submit — current status is '${request.status}'`);
-}
+const reserved = await UPDATE(DepartmentBudget)
+  .set({ reservedAmount: { "+=": amt }, remainingAmount: { "-=": amt } })
+  .where({ costCenter, fiscalYear, fiscalMonth, remainingAmount: { ">=": amt } });
 ```
-A request can be resubmitted after rejection. So `submit` must accept both `DRAFT` (first submission) and `REJECTED` (resubmission) as valid starting states.
 
-**Why clean up ACTIVE steps before creating new ones?**
-```javascript
-await UPDATE(ApprovalStep)
-  .set({ stepStatus: 'COMPLETED' })
-  .where({ request_ID: ID, stepStatus: 'ACTIVE' });
-```
-On resubmission, any leftover ACTIVE steps from the previous rejected run must be closed before creating new ones. Otherwise the approval logic would find multiple ACTIVE steps and behave incorrectly.
+Check and write are one statement, so two submits at the same moment cannot both take the last of the budget. The year and month come from the server clock, whose time zone is set to the company's in `mta.yaml` (`TZ`). The period is stored on the request so approve and reject later move money in the same row.
 
 ### Resubmission tracking
 
 ```javascript
 const runs = await SELECT.from(WorkflowInstance).where({ request_ID: ID });
 const runNumber = runs.length + 1;
-if (runNumber > 3) {
-  return req.error(400, 'Maximum resubmissions reached.');
-}
+if (runNumber > 3) return req.error(400, 'Maximum resubmissions reached. Request is permanently closed.');
 ```
 
-Each submission creates a WorkflowInstance. The count of existing instances tells us which run this is. After 3 runs, the request is permanently closed.
+Each submission creates a WorkflowInstance; their count is the run number. Steps carry the run number too, which the two-person rule needs.
 
 ---
 
@@ -92,40 +85,34 @@ Each submission creates a WorkflowInstance. The count of existing instances tell
 ### What it does
 
 1. Validates the request is `IN_APPROVAL`
-2. Finds the ACTIVE step for this approver
-3. Verifies the calling user is the assigned approver
-4. Marks the step as `COMPLETED` with decision `APPROVED`
-5. Checks if all steps are now approved
-6. If yes, sets request status to `APPROVED`
-7. Writes audit log
+2. Finds the active step this user may act on (see below)
+3. Marks it `COMPLETED` / `APPROVED` and records the real user in `approverUserId`
+4. If no step is still pending: request → `APPROVED`, budget reserved → consumed, workflow run → `COMPLETED`
+5. Writes the audit log; the alert goes out after commit
 
-### The approverUserId guard
+### Who may act on a step
 
 ```javascript
-if (step.approverUserId !== req.user.id) {
-  return req.error(403, 'You are not the assigned approver for this step');
-}
+if (request.createdBy === req.user.id) req.reject(403, "You cannot approve or reject your own request");
+const step = steps.find((s) => req.user.is(s.approverRole));
+// … and the same user may not approve two steps of one run
 ```
 
-This is the most important security check in the entire handler. Without it, any Manager or Finance user could approve any request — including ones not assigned to them. The guard ensures that `manager@company.com` can only approve steps where `approverUserId === 'manager@company.com'`.
+Three rules, checked in `activeStepFor`:
+- **Not your own request.** A user with both Requester and Manager roles cannot approve what they created.
+- **Your role must match an active step.** For requests needing Finance, the Manager and Finance steps are active at the same time, so the handler picks the step matching the user's role instead of the first one.
+- **Two steps need two people.** A user holding both Manager and Finance cannot approve both steps of the same run. Steps of earlier runs don't count, so a Manager may approve again after a resubmit.
 
-`req.user.id` comes from the JWT token in production — it cannot be faked. This is why XSUAA is so important: it's the cryptographic guarantee that the user claiming to be `manager@company.com` actually is.
-
-**This check was temporarily disabled during local testing** (without real XSUAA, all users share the same mock session). It was restored before deployment.
+`req.user` comes from the XSUAA JWT in production — it cannot be faked.
 
 ### Parallel approval detection
 
 ```javascript
-const pendingSteps = await SELECT.from(ApprovalStep).where({
-  request_ID: ID,
-  decision: 'PENDING',
-});
-if (!pendingSteps.length) {
-  await UPDATE(Request).set({ status: 'APPROVED' }).where({ ID });
-}
+const pendingSteps = await SELECT.from(ApprovalStep).where({ request_ID: ID, decision: 'PENDING' });
+if (!pendingSteps.length) { /* request → APPROVED */ }
 ```
 
-For requests above 5,000, both Manager and Finance must approve. After each approval, we check if any steps still have `decision: 'PENDING'`. Only when ALL steps are approved does the request move to `APPROVED` status. This implements the AND-join (parallel approval) logic entirely in code without needing a BPMN engine.
+After each approval, the request is approved only when no step is still pending. This implements the AND-join (parallel approval) in code without a BPMN engine. It is also why skipped steps must not stay `PENDING`.
 
 ---
 
@@ -133,74 +120,76 @@ For requests above 5,000, both Manager and Finance must approve. After each appr
 
 ### What it does
 
-1. Validates the request is `IN_APPROVAL`
-2. Finds the ACTIVE step for this approver
-3. Verifies the calling user is the assigned approver
-4. Marks the step as `COMPLETED` with decision `REJECTED`
-5. Marks ALL other ACTIVE steps as `SKIPPED` (parallel step cancellation)
-6. Sets request status to `REJECTED`
-7. Writes audit log
+1. Validates the request is `IN_APPROVAL` and the user may act (same rules as approve)
+2. Requires a reason
+3. Marks the step `COMPLETED` / `REJECTED` with the reason
+4. Marks all other active steps `SKIPPED` (decision `SKIPPED`)
+5. Releases the reserved budget, sets the request to `REJECTED`, closes the workflow run
+6. Writes the audit log; the alert goes out after commit
 
 ### Parallel step cancellation
 
 ```javascript
 await UPDATE(ApprovalStep)
-  .set({ stepStatus: 'SKIPPED', decision: 'PENDING' })
+  .set({ stepStatus: 'SKIPPED', decision: 'SKIPPED' })
   .where({ request_ID: ID, stepStatus: 'ACTIVE' });
 ```
 
-In a parallel approval scenario (amount > 5,000), if Finance rejects, the Manager's step should be cancelled immediately — there's no point waiting for manager approval if finance already rejected. This UPDATE skips all remaining ACTIVE steps in one query.
+If Finance rejects, the Manager's step is cancelled at once — there is no point waiting. The decision is `SKIPPED`, not `PENDING`: the approve handler counts `PENDING` decisions across all runs, so a skipped step left `PENDING` would block every later approval of a resubmitted request.
 
-**Why `decision: 'PENDING'` when skipping?**
-The step was never decided — it was cancelled before a decision was made. Setting `decision: 'PENDING'` on a `SKIPPED` step accurately reflects this: the step was skipped, not approved or rejected.
+The requester sees the reason in the Approval Steps table, changes the request and resubmits.
 
-### The reject comment
+---
 
-```javascript
-comment: req.data.comment || 'No reason provided'
-```
+## Draft and S/4HANA Handlers
 
-The `reject` action accepts an optional `comment` parameter. If the rejecting approver provides a reason, it's stored on the step. If not, a default message is used. This appears in the audit log and is visible to the requester.
+These run while the requester edits a draft (`validation-handler.js`, plus totals in `request-handler.js`):
+
+- **Picking a vendor** checks the supplier exists and is not blocked or deleted, fills name and country, and sets the currency: the supplier's purchasing currency, else its currency in the cost center's company code.
+- **Picking a cost center** checks it is valid today and not blocked, and fills its name and budget currency.
+- **Picking a product** fills name, unit and product group, plus the price agreed with the vendor (Purchasing Info Record; expired prices are skipped, other currencies only warn).
+- **Changing vendor, cost center or currency** re-prices the items already on the request.
+- **Changing or deleting an item** recalculates line totals and the request total.
+- **Bad values are rejected with `req.reject`**, not `req.error`: in a draft PATCH, `req.error` only adds a draft message and the bad value is still stored.
+- **Value-help search** is turned into a `contains` filter, because the S/4 APIs reject OData `$search`.
+
+Saving a draft also checks the delivery date is not in the past and each item has quantity > 0 and price ≥ 0. Submitted requests cannot be edited, saved or deleted.
 
 ---
 
 ## Error Handling Pattern
 
-All handlers use `req.error()` to return errors:
-
 ```javascript
-return req.error(400, 'Request is not available for approval');
-return req.error(403, 'You are not the assigned approver for this step');
-return req.error(404, `Request ${ID} not found`);
+return req.error(400, `Cannot submit — current status is '${request.status}'`);
+req.reject(403, "You cannot approve or reject your own request");
+req.notify(`Request ${result.requestNumber} submitted for approval`);
+req.warn(`Budget for ${name} is almost used up: …`);
 ```
 
-**Why `return req.error()` instead of `throw`?**
-`req.error()` integrates with CAP's error handling and returns a proper OData error response with the correct HTTP status code. Fiori Elements reads this and displays the error message to the user automatically in a dialog. A raw `throw` would cause an unhandled exception.
+- `req.error()` collects an error; CAP fails the request after the handler. Use `return req.error(...)` to stop the handler there.
+- `req.reject()` throws at once — used inside helpers, where a `return` would only leave the helper.
+- `req.notify()`, `req.info()` and `req.warn()` send success, info and warning messages. Fiori Elements shows them as a toast or message dialog.
 
 **HTTP status codes:**
 - `400` — Bad Request (wrong state, business rule violation)
 - `403` — Forbidden (wrong user, permission violation)
 - `404` — Not Found (entity doesn't exist)
+- `502` — S/4HANA could not be reached
 
 ---
 
-## Audit Log Pattern
-
-Every significant action writes an audit entry:
+## Audit Log and Alerts
 
 ```javascript
 await INSERT.into(AuditLog).entries({
-  request_ID: ID,
-  entityName: 'Request',
-  entityId: ID,
-  action: 'APPROVE',
-  oldValue: request.status,
-  newValue: 'APPROVED',
+  request_ID: ID, entityName: 'PurchaseRequest', entityId: ID,
+  action: 'APPROVE', oldValue: request.status, newValue: newStatus,
   performedBy: req.user.id,
 });
+req.on("succeeded", () => sendAlert({ … }));
 ```
 
-`performedBy: req.user.id` captures who performed the action from the JWT token. This cannot be spoofed — it comes directly from the cryptographically signed token.
+The audit entry is part of the transaction: if the action fails, no entry is written. The alert is sent only after the transaction commits, without waiting for it and with a 5-second timeout — a slow alert service must not hold the budget row locked.
 
 ---
 
@@ -208,28 +197,27 @@ await INSERT.into(AuditLog).entries({
 
 ```
 submit()
-  ├── Validate: status is DRAFT or REJECTED
+  ├── Validate: status is DRAFT or REJECTED, total > 0
+  ├── Validate: currency = cost center budget currency
   ├── Check: runNumber ≤ 3
-  ├── Create approval steps (based on amount threshold)
-  ├── Create WorkflowInstance
-  ├── Update Request status → IN_APPROVAL
-  └── Write AuditLog
+  ├── Reserve budget (atomic), warn below 10%
+  ├── Request number on first submit
+  ├── Create steps: Manager, + Finance above the currency limit
+  ├── Create WorkflowInstance, Request → IN_APPROVAL
+  └── Write AuditLog; alert after commit
 
 approve()
   ├── Validate: status is IN_APPROVAL
-  ├── Find ACTIVE step
-  ├── Guard: approverUserId === req.user.id
-  ├── Update step → COMPLETED / APPROVED
-  ├── Check: any pending steps remaining?
-  │   └── NO → Update Request → APPROVED
-  └── Write AuditLog
+  ├── Guard: not own request, role matches an active step, not a second step of the same run
+  ├── Update step → COMPLETED / APPROVED (records the user)
+  ├── Any pending steps remaining?
+  │   └── NO → Request → APPROVED, budget reserved → consumed, run → COMPLETED
+  └── Write AuditLog; alert after commit
 
 reject()
-  ├── Validate: status is IN_APPROVAL
-  ├── Find ACTIVE step
-  ├── Guard: approverUserId === req.user.id
+  ├── Validate: status is IN_APPROVAL, same guards, reason given
   ├── Update step → COMPLETED / REJECTED
   ├── Skip all other ACTIVE steps
-  ├── Update Request → REJECTED
-  └── Write AuditLog
+  ├── Release budget, Request → REJECTED, run → COMPLETED
+  └── Write AuditLog; alert after commit
 ```

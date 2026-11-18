@@ -31,7 +31,6 @@ modules:
       - name: enterprise-approval-workflow-destination
       - name: enterprise-approval-workflow-ans
 
-
   - name: enterprise-approval-workflow-db-deployer
     type: hdb
     path: gen/db
@@ -95,7 +94,8 @@ modules:
       commands:
         - npm install
         - npm run build:cf
-      supported-platforms: []
+      supported-platforms:
+        []
   - name: adminui
     type: html5
     path: app/admin-ui
@@ -105,7 +105,8 @@ modules:
       commands:
         - npm install
         - npm run build:cf
-      supported-platforms: []
+      supported-platforms:
+        []
 
 resources:
   - name: enterprise-approval-workflow-db
@@ -157,7 +158,7 @@ resources:
       service: html5-apps-repo
       service-plan: app-host
       service-name: enterprise-approval-workflow-html5-host
-      
+
   - name: enterprise-approval-workflow-ans
     type: org.cloudfoundry.existing-service
     parameters:
