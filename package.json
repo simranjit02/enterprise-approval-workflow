@@ -4,6 +4,7 @@
   "description": "Enterprise Approval Workflow built with SAP CAP, XSUAA and SAP Build Process Automation.",
   "dependencies": {
     "@cap-js/hana": "^2",
+    "@google/genai": "^3.6.1",
     "@sap-cloud-sdk/connectivity": "^4",
     "@sap-cloud-sdk/http-client": "^4",
     "@sap-cloud-sdk/resilience": "^4",

@@ -172,6 +172,26 @@ annotate service.Requests with @(
         },
         {
             $Type        : 'UI.DataFieldForAction',
+            Action       : 'ApprovalService.aiReview',
+            Label        : 'AI Review',
+            Determining  : true,
+            ![@UI.Hidden]: {$edmJson: {$Or: [
+                {$Eq: [
+                    {$Path: 'IsActiveEntity'},
+                    {$Bool: false}
+                ]},
+                {$Ne: [
+                    {$Path: 'isApprover'},
+                    {$Bool: true}
+                ]},
+                {$Ne: [
+                    {$Path: 'status'},
+                    {$String: 'IN_APPROVAL'}
+                ]}
+            ]}}
+        },
+        {
+            $Type        : 'UI.DataFieldForAction',
             Action       : 'ApprovalService.cancel',
             Label        : 'Cancel',
             Determining  : true,
@@ -246,6 +266,30 @@ annotate service.Requests with @(
         },
         {
             $Type : 'UI.ReferenceFacet',
+            ID    : 'AIReviewFacet',
+            Label : 'AI Review',
+            Target: '@UI.FieldGroup#AIReview',
+            // Visible while a review can be run (or exists), so Fiori loads its fields with the page;
+            // a section hidden at load gets no data after the action. Requesters never see it.
+            ![@UI.Hidden]: {$edmJson: {$Or: [
+                {$Eq: [
+                    {$Path: 'isOwner'},
+                    {$Bool: true}
+                ]},
+                {$And: [
+                    {$Ne: [
+                        {$Path: 'status'},
+                        {$String: 'IN_APPROVAL'}
+                    ]},
+                    {$Eq: [
+                        {$Path: 'aiReviewedAt'},
+                        {$Null: null}
+                    ]}
+                ]}
+            ]}},
+        },
+        {
+            $Type : 'UI.ReferenceFacet',
             ID    : 'ApprovalStepsFacet',
             Label : 'Approval Steps',
             Target: 'steps/@UI.LineItem',
@@ -256,6 +300,27 @@ annotate service.Requests with @(
             ]}},
         },
     ],
+
+    UI.FieldGroup #AIReview       : {
+        $Type: 'UI.FieldGroupType',
+        Data : [
+            {
+                $Type: 'UI.DataField',
+                Label: 'Review',
+                Value: aiReview
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Suggested Comment',
+                Value: aiSuggestedComment
+            },
+            {
+                $Type: 'UI.DataField',
+                Label: 'Reviewed At',
+                Value: aiReviewedAt
+            },
+        ],
+    },
 
     UI.FieldGroup #RequestDetails : {
         $Type: 'UI.FieldGroupType',
@@ -401,6 +466,8 @@ annotate service.Requests with {
     submittedAt       @Common.FieldControl: #ReadOnly;
     completedAt       @Common.FieldControl: #ReadOnly;
     totalAmount       @Common.FieldControl: #ReadOnly;
+    aiReview          @UI.MultiLineText;
+    aiSuggestedComment @UI.MultiLineText;
 };
 
 // ─── SideEffects ─────────────────────────────────────────────────────────────
@@ -438,6 +505,16 @@ annotate service.Requests with actions {
         ],
         TargetEntities  : [in.steps],
     });
+    aiReview @(Common.SideEffects: {
+        TargetProperties: [
+            'in/isApprover',
+            'in/isOwner',
+            'in/hideEdit',
+            'in/aiReview',
+            'in/aiReviewedAt',
+            'in/aiSuggestedComment'
+        ],
+    });
     cancel  @(Common.IsActionCritical: true, Common.SideEffects: {
         TargetProperties: [
             'in/isApprover',
@@ -448,6 +525,11 @@ annotate service.Requests with actions {
         ],
         TargetEntities  : [in.steps],
     });
+};
+
+// The Reject dialog opens with the AI's suggested comment, which the approver can edit or delete.
+annotate service.Requests with actions {
+    reject(comment @UI.ParameterDefaultValue: in.aiSuggestedComment  @UI.MultiLineText);
 };
 
 // Filled from S/4HANA when vendor / cost center / product is picked (validation-handler.js)

@@ -27,6 +27,9 @@ entity PurchaseRequest : cuid, managed {
     status                : Status default 'DRAFT';
     submittedAt           : Timestamp;
     completedAt           : Timestamp;
+    aiReview              : LargeString; // latest AI Review verdict; approvers only, cleared on (re)submit
+    aiReviewedAt          : Timestamp;
+    aiSuggestedComment    : String(500); // pre-fills the Reject dialog
     virtual isApprover    : Boolean;
     virtual isOwner       : Boolean; // current user created it
     virtual hideEdit      : Boolean; // not owner, or no longer DRAFT/REJECTED

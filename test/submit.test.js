@@ -42,6 +42,14 @@ describe('submit action', () => {
     expect(result.submittedAt).to.exist
   })
 
+  it('submit clears an AI review of the earlier version', async () => {
+    const { PurchaseRequest } = cds.entities('com.enterprise.approval')
+    await UPDATE(PurchaseRequest).set({ aiReview: 'old', aiReviewedAt: new Date(), aiSuggestedComment: 'old' }).where({ ID: DRAFT_ID })
+    await POST(`/odata/v4/approval/Requests(ID=${DRAFT_ID},IsActiveEntity=true)/ApprovalService.submit`, {}, REQUESTER)
+    const row = await SELECT.one.from(PurchaseRequest).where({ ID: DRAFT_ID })
+    expect([row.aiReview, row.aiReviewedAt, row.aiSuggestedComment]).to.deep.equal([null, null, null])
+  })
+
   it('sad path: cannot submit a request that is already IN_APPROVAL', async () => {
     await POST(
       `/odata/v4/approval/Requests(ID=${DRAFT_ID},IsActiveEntity=true)/ApprovalService.submit`,

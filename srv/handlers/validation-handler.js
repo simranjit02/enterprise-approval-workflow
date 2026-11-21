@@ -159,6 +159,7 @@ module.exports = async (srv) => {
         const perUnit = Number(price.NetPriceAmount) / (Number(price.MaterialPriceUnitQty) || 1);
         return { amount: Math.round(perUnit * 100) / 100, currency: price.Currency };
     };
+    srv._agreedPrice = agreedPrice; // also used by the AI review agent
 
     // Agreed price in the request's currency, or null with a message saying why.
     const priceFor = async (req, request, productId) => {

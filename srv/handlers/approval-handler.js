@@ -110,7 +110,10 @@ module.exports = async (srv) => {
       .where({ request_ID: ID, stepStatus: "ACTIVE" });
     await srv._releaseBudget(request);
 
-    await UPDATE(PurchaseRequest).set({ status: "REJECTED", completedAt: new Date() }).where({ ID });
+    // Clear the AI review: the requester edits a REJECTED request as a draft, which would copy it (history stays in AuditLog).
+    await UPDATE(PurchaseRequest).set({
+      status: "REJECTED", completedAt: new Date(), aiReview: null, aiReviewedAt: null, aiSuggestedComment: null,
+    }).where({ ID });
     await closeRun(ID);
     await INSERT.into(AuditLog).entries({
       request_ID: ID,

@@ -288,7 +288,7 @@ module.exports = async (srv) => {
 
     // ── Final status update ──
     await UPDATE(PurchaseRequest)
-      .set({ status: "IN_APPROVAL" })
+      .set({ status: "IN_APPROVAL", aiReview: null, aiReviewedAt: null, aiSuggestedComment: null }) // the old review is for the old version
       .where({ ID });
 
     // ── Audit log ──
@@ -370,6 +370,10 @@ module.exports = async (srv) => {
       // No active row yet = a new draft, which only its creator can see.
       row.isOwner = !active || active.createdBy === req.user.id;
       row.hideEdit = !row.isOwner || (!!active && active.status !== "DRAFT" && active.status !== "REJECTED");
+      // The AI review is the approvers' working note, not shown to requesters.
+      if (!req.user.is("Manager") && !req.user.is("Finance")) {
+        for (const f of ["aiReview", "aiReviewedAt", "aiSuggestedComment"]) if (f in row) row[f] = null;
+      }
     }
   });
 

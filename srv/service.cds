@@ -110,7 +110,7 @@ service ApprovalService {
                     'Finance'
                 ]
             }]
-            action reject(comment: String @mandatory) returns Requests;
+            action reject(comment: String(500) @mandatory) returns Requests;
 
             @restrict: [{
                 grant: ['READ'],
@@ -121,6 +121,16 @@ service ApprovalService {
                 ]
             }]
             action checkBudget()           returns String;
+
+            // Advice only: a Gemini agent investigates the request with read-only tools.
+            @restrict: [{
+                grant: ['READ'],
+                to   : [
+                    'Manager',
+                    'Finance'
+                ]
+            }]
+            action aiReview()              returns Requests;
         };
 
     entity RequestItems     as projection on db.RequestItem
@@ -198,6 +208,9 @@ annotate ApprovalService.Requests with {
     budgetFiscalYear   @readonly;
     budgetFiscalMonth  @readonly;
     costCenterCurrency @readonly;
+    aiReview           @readonly; // written only by the aiReview action
+    aiReviewedAt       @readonly;
+    aiSuggestedComment @readonly;
     title             @mandatory;
     category          @mandatory;
     priority          @mandatory;
