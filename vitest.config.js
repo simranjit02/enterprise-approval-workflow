@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     hookTimeout: 60000,
     testTimeout: 60000,
-    pool: 'forks'
+    pool: 'forks',
+    fileParallelism: false // each file boots its own CAP server; in parallel they clash on ports (EADDRINUSE)
   }
 })
